@@ -16,6 +16,28 @@ from sklearn.decomposition import NMF
 
 DOCS_DIR = "/home/claude/extracted_documents"
 YEAR_PAT = re.compile(r'(19[2-6]\d)')
+YEAR_RANGE_PAT = re.compile(r'(19[2-6]\d)\s*[-\u2013]\s*(\d{2,4})')
+
+
+def extract_year(title, body_start):
+    """See topic_model.py for rationale: a year-range like "1944-55" in the
+    title/opening lines usually marks a retrospective summary report, so we
+    use the range's END year rather than the first year a plain regex would
+    grab."""
+    for src in (title, body_start):
+        m = YEAR_RANGE_PAT.search(src)
+        if m:
+            start_year = int(m.group(1))
+            end_raw = m.group(2)
+            if len(end_raw) == 4:
+                end_year = int(end_raw)
+            else:
+                end_year = (start_year // 100) * 100 + int(end_raw)
+                if end_year < start_year:
+                    end_year += 100
+            return end_year
+    m2 = YEAR_PAT.search(title) or YEAR_PAT.search(body_start)
+    return int(m2.group(1)) if m2 else None
 
 N_TOPICS_OUN = 8
 N_TOPICS_SOVIET = 6   # smaller corpus (37 docs) -> fewer topics to stay stable
@@ -40,9 +62,9 @@ def assign_years(idx):
     years = {}
     for d in idx:
         text = open(f"{DOCS_DIR}/{d['filename']}", encoding="utf-8").read()
-        m = YEAR_PAT.search(d["title"]) or YEAR_PAT.search(text[:800])
-        if m:
-            years[d["number"]] = [int(m.group(1)), False]
+        year = extract_year(d["title"], text[:800])
+        if year is not None:
+            years[d["number"]] = [year, False]
     nums = [d["number"] for d in idx]
     for n in nums:
         if n not in years:
