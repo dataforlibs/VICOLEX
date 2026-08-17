@@ -72,15 +72,36 @@
   #tooltip .title-row b { color: var(--text-secondary); font-style: normal; flex: none; }
 
   .legend { display: flex; gap: 18px; margin: 14px 0 4px 0; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary);
+    cursor: pointer; user-select: none; padding: 2px 5px; margin: -2px -5px; border-radius: 5px;
+    border: 1px solid transparent; transition: background 0.12s, opacity 0.12s;
+  }
+  .legend-item:hover { background: var(--surface-2); }
+  .legend-item.is-focused { color: var(--text-primary); font-weight: 700; border-color: var(--border); background: var(--surface-2); }
+  .legend.has-focus .legend-item:not(.is-focused) { opacity: 0.45; }
   .legend-swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .swatch.other, .legend-swatch.other { border-radius: 3px; }
+  .focus-hint {
+    display: none; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);
+    margin: 2px 0 10px 0;
+  }
+  .focus-hint.show { display: flex; }
+  .focus-hint .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .focus-hint button {
+    background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 5px; padding: 3px 9px; font-size: 11.5px; cursor: pointer; font-family: inherit;
+  }
+  .focus-hint button:hover { background: #202631; }
 
   #tableView { display: none; margin-top: 10px; }
   #tableView table { width: 100%; border-collapse: collapse; font-size: 12px; }
   #tableView th, #tableView td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--gridline); }
   #tableView th:first-child, #tableView td:first-child { text-align: left; }
   #tableView th { color: var(--text-muted); font-weight: 600; position: sticky; top: 0; background: var(--surface-1); }
-  #tableView .tbl-scroll { max-height: 480px; overflow-y: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+  #tableView .tbl-scroll { max-height: 480px; overflow: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+  #tableView table { min-width: 1500px; }
+  #tableView th:first-child, #tableView td:first-child { position: sticky; left: 0; background: var(--surface-1); }
 
   .footer-note { color: var(--text-muted); font-size: 11.5px; margin-top: 16px; line-height: 1.6; max-width: 880px; }
 
@@ -96,7 +117,7 @@
 </style>
 </head>
 <body>
-<div class="viz-root" data-palette="#3987e5,#d95926,#199e70,#c98500,#d55181,#008300,#9085e9">
+<div class="viz-root" data-palette="#9b971e,#ef25d0,#7da21e,#24a4b1,#af8e1f,#25a89a,#a8632f,#2a9dc4,#e66767,#b623f5,#e0507a,#008300,#d55181,#c98500,#9085e9,#199e70,#3987e5,#d95926">
   <h1>Subject Themes in Ukraine's History</h1>
   <div class="companion-row">
     <a id="aboutLink" href="dk508_landing.html" target="_blank" rel="noopener" title="About this project: data, motivation, and methodology">← About this project</a>
@@ -104,37 +125,75 @@
     <a id="companionLink2" href="dk508_influence_river.html" target="_blank" rel="noopener" title="Opens the companion geographic river (Russia &amp; Poland) -- keep both files in the same folder for this link to work">📈 Companion chart: Russia &amp; Poland river →</a>
   </div>
   <p class="subtitle">
-    How much publishing attention seven of the DK508 (Ukraine — History) catalog's own subject
-    themes — not places — have received, year by year from 1727 to 2016. Unlike the companion
-    Russia/Poland river, this chart tracks <b>when books were published</b> about each theme, not
-    when the underlying events happened — see the methodology note for why, and how that changes
-    what the shape means.
+    How much publishing attention nineteen distinct DK508 (Ukraine — History) catalog subject
+    topics — eighteen named, solid-color topics, down to a final "Other topics" remainder — have
+    received, year by year from 1727 to 2016. Unlike the companion Russia/Poland river, this chart
+    tracks <b>when books were published</b> about each topic, not when the underlying events
+    happened — see the methodology note for why, and how that changes what the shape means.
   </p>
   <div class="methodology">
     <b>What this measures:</b> for each year, how many distinct records whose subject headings
-    match one of seven hand-picked themes — <b>Politics and government, Foreign relations,
-    Antiquities, Nationalism &amp; independence movements, World War II, Revolution &amp; Civil
-    War (1917–21), Famine (Holodomor)</b> — were <i>published</i> that year (the same LC
-    call-number year used throughout this project), summed across
-    <b id="totalRecordsNum">—</b> records. These seven were chosen from the collection's actual
-    most frequent non-geographic heading segments, keeping only substantive historical/political
-    themes and excluding cataloging <i>form</i> subdivisions that rank just as high in the raw
-    counts — Biography, Congresses, Pictorial works, Dictionaries, Catalogs — which describe what
-    <i>kind</i> of book it is, not what it's about. A record can count under more than one theme.
+    match one of eleven original headline themes — <b>Politics and government, Foreign
+    relations, Antiquities, Nationalism &amp; independence movements, World War II, Revolution
+    &amp; Civil War (1917–21), Famine (Holodomor), OUN &amp; UPA (nationalist underground), Ethnic
+    relations, Political persecution &amp; prisoners, Euromaidan Protests (2013–14)</b> — plus
+    seven more named topics added later (<b>People, Historiography &amp; historians, Intellectual
+    &amp; cultural life, Local &amp; military history, Description &amp; travel, Ethnic groups,
+    Social &amp; economic conditions</b>) — were <i>published</i> that year (the same LC
+    call-number year used throughout this project). All eighteen are solid-color bands, each its
+    own hue. A final catch-all, <b>Other topics</b> (shown with a diagonal-hatch texture, not a
+    color — see below), covers every remaining substantive heading that isn't a place, a
+    cataloging form label, or a bare date. Together all nineteen bands cover
+    <b id="totalRecordsNum">—</b> of this catalog's 7,093 records — up from just 2,588 (36%) when
+    only the original seven headline themes are counted. A record can count under more than one
+    band.
+    <br><br>
+    <b>Why some bands are named and others stay in "Other":</b> asked directly whether the
+    chart's named themes were exhaustive, the honest answer was no — most of the catalog's real
+    subject matter fell outside the original seven bands entirely. Asked to show that remainder
+    as distinct topics rather than one undifferentiated lump, the biggest, most coherent clusters
+    were broken out into their own seven named bands (<b>People</b> is the largest at 974 records
+    — any heading naming a specific individual, e.g. "Bandera, Stepan, 1909–1959" — while the
+    other six group closely related segments, e.g. Historiography &amp; historians combines
+    "Historiography," "Historians," and "History and criticism"). What's left after that — real,
+    but each too small or too idiosyncratic on its own to justify a 19th named band — is Other
+    topics.
+    <br><br>
+    <b>How eighteen colors fit a palette that used to cap at eleven:</b> the first version of this
+    expansion gave the seven new bands a muted texture instead of a color, since this project's
+    dark categorical palette topped out at eleven hues its own colorblind-separation validator
+    would pass. Asked to use color instead, seven new hues were picked from the original eleven's
+    biggest open gaps on the color wheel, and a solver was run over all 18 colors' pairwise
+    colorblind-vision distances to find the one stacking order where every ADJACENT pair (the only
+    pairs that actually touch in a stacked chart) clears the validator's target threshold — not
+    just its lower floor. Result: every adjacent pair is more visually distinct than this project's
+    own bar for a passing palette requires. The one exception is <b>Other topics</b>, which stays
+    textured on purpose (see below) rather than claiming a 19th hue.
+    <br><br>
+    <b>Why "Other topics" stays textured:</b> a plain gray solid was tried first for it and failed
+    both the chroma-floor check (it isn't a real hue) and the CVD-separation check against its
+    stack neighbor — and giving the residual catch-all a real color would visually claim it's a
+    coherent 19th topic, which it isn't. It keeps the diagonal-hatch texture that's a perceptual
+    channel independent of hue and color-vision type; exact identification comes from the legend,
+    the hover tooltip, or the direct right-edge label, never the pattern alone.
+    <br><br>
+    Excluded throughout: cataloging <i>form</i> subdivisions that rank high in the raw heading
+    counts but describe what <i>kind</i> of book it is, not what it's about (Biography, Congresses,
+    Pictorial works, Dictionaries, Catalogs, Guidebooks, and similar), geographic place headings
+    (tracked instead by the companion map and river), and bare date/century fragments.
     <br><br>
     <b>Why publication year, not event year:</b> the companion Russia/Poland river plots each
     mention by the year its OWN subject-heading date subdivision covers (e.g. a heading dated
     "1917–1921" counts toward those exact years) — but topical headings like "Nationalism" or
-    "Antiquities" carry no date of their own to borrow, and even the three themes named after a
-    specific episode overwhelmingly appear in books published <i>decades</i> after that episode,
-    about it, not from it: this catalog has no book physically published during the 1932–33
-    famine, for instance. So every band on this chart is dated the only way that's actually
-    possible here — by when the book itself came out — which makes this a chart of
+    "Antiquities" carry no date of their own to borrow, and even the episode-named themes
+    (Famine, Revolution, WWII) overwhelmingly appear in books published <i>decades</i> after that
+    episode, about it, not from it: this catalog has no book physically published during the
+    1932–33 famine, for instance. So every band on this chart is dated the only way that's
+    actually possible here — by when the book itself came out — which makes this a chart of
     <b>historiography</b> (when people wrote about a theme), not of the theme's own chronology.
     The flowing curve is a <b id="smoothWindowNum">—</b>-year centered moving average of the raw
-    yearly counts, smoothed for legibility (even the largest band averages under 4 records/year
-    across 290 years); hover the chart, or switch to the table, for the exact unsmoothed number
-    behind any point.
+    yearly counts, smoothed for legibility; hover the chart, or switch to the table, for the exact
+    unsmoothed number behind any point.
   </div>
 
   <div class="toolbar">
@@ -150,6 +209,11 @@
   </div>
 
   <div class="legend" id="legend"></div>
+  <div class="focus-hint" id="focusHint">
+    <span class="swatch" id="focusHintSwatch"></span>
+    <span id="focusHintText"></span>
+    <button id="focusHintClear" type="button">Show all topics</button>
+  </div>
 
   <div id="tableView">
     <div class="tbl-scroll">
@@ -164,24 +228,100 @@
 </div>
 
 <script>
-const DATA = {"yearMin":1727,"yearMax":2016,"years":[1727,1728,1729,1730,1731,1732,1733,1734,1735,1736,1737,1738,1739,1740,1741,1742,1743,1744,1745,1746,1747,1748,1749,1750,1751,1752,1753,1754,1755,1756,1757,1758,1759,1760,1761,1762,1763,1764,1765,1766,1767,1768,1769,1770,1771,1772,1773,1774,1775,1776,1777,1778,1779,1780,1781,1782,1783,1784,1785,1786,1787,1788,1789,1790,1791,1792,1793,1794,1795,1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822,1823,1824,1825,1826,1827,1828,1829,1830,1831,1832,1833,1834,1835,1836,1837,1838,1839,1840,1841,1842,1843,1844,1845,1846,1847,1848,1849,1850,1851,1852,1853,1854,1855,1856,1857,1858,1859,1860,1861,1862,1863,1864,1865,1866,1867,1868,1869,1870,1871,1872,1873,1874,1875,1876,1877,1878,1879,1880,1881,1882,1883,1884,1885,1886,1887,1888,1889,1890,1891,1892,1893,1894,1895,1896,1897,1898,1899,1900,1901,1902,1903,1904,1905,1906,1907,1908,1909,1910,1911,1912,1913,1914,1915,1916,1917,1918,1919,1920,1921,1922,1923,1924,1925,1926,1927,1928,1929,1930,1931,1932,1933,1934,1935,1936,1937,1938,1939,1940,1941,1942,1943,1944,1945,1946,1947,1948,1949,1950,1951,1952,1953,1954,1955,1956,1957,1958,1959,1960,1961,1962,1963,1964,1965,1966,1967,1968,1969,1970,1971,1972,1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016],"smoothWindow":5,"bandOrder":["politics","antiquities","foreign_relations","wwii","revolution","nationalism","famine"],"bandLabel":{"politics":"Politics and government","antiquities":"Antiquities","foreign_relations":"Foreign relations","wwii":"World War II, 1939–1945","revolution":"Revolution & Civil War, 1917–21","nationalism":"Nationalism & independence movements","famine":"Famine (Holodomor)"},"bandColor":{"politics":"#3987e5","antiquities":"#d95926","foreign_relations":"#199e70","wwii":"#c98500","revolution":"#d55181","nationalism":"#008300","famine":"#9085e9"},"bandMatch":{"politics":["Politics and government"],"antiquities":["Antiquities"],"foreign_relations":["Foreign relations"],"wwii":["World War, 1939-1945"],"revolution":["Revolution, 1917-1921"],"nationalism":["Nationalism","Autonomy and independence movements"],"famine":["Famine","Famines"]},"series":{"politics":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,0,0,0,2,0,0,2,0,2,0,0,1,2,1,0,1,1,0,3,2,3,1,0,1,2,3,4,1,5,6,3,13,7,6,7,9,3,8,6,6,20,25,26,23,32,24,33,26,36,42,42,31,30,35,55,44,33,30,33,36,32,20,53,32,0],"antiquities":[4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,2,0,0,2,0,0,0,1,1,0,0,0,0,8,9,5,10,10,7,11,12,12,10,12,14,11,13,7,8,9,14,20,10,9,16,15,19,21,19,15,14,10,22,12,10,9,5,0,0],"foreign_relations":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,2,2,0,1,1,3,7,9,6,7,10,10,15,11,13,12,9,9,9,10,21,8,12,6,8,8,4,29,20,1],"wwii":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1,2,1,4,1,0,2,1,1,3,1,1,1,3,3,6,4,4,8,8,11,8,8,6,9,8,7,9,12,4,6,5,4,1,1],"revolution":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,0,1,0,0,0,0,0,0,0,0,1,1,0,1,3,2,0,0,1,0,1,0,1,0,2,0,0,1,3,1,1,0,3,4,9,5,11,5,7,10,10,8,5,12,11,14,8,8,6,12,4,7,7,6,9,5,0,0],"nationalism":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,2,2,3,1,2,3,0,1,0,1,0,0,1,0,2,2,2,1,1,4,1,1,1,2,1,0,0,3,2,7,14,3,11,5,6,2,7,4,1,3,5,8,23,16,17,23,26,26,29,33,25,35,21,26,27,25,17,13,13,12,14,9,6,16,8,0],"famine":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1,0,0,0,1,0,0,0,0,2,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,8,2,2,3,1,20,0,3,3,2,14,0,1,2,2,3,2,4,3,4,17,7,9,11,15,85,12,3,7,2,7,2,3,0]},"decadeTitles":{"politics":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Miz︠h︡ vichnymy poli︠u︡samy /","Russia and Ukraine :","--\"I︠A︡ povstai︠u︡, otz︠h︡e, i︠a︡ isnui︠u︡ ...\" :"],"2000":["\"Ukrainskiĭ vopros\" v politike vlasteĭ i russkom obshchestvennom mnenii (vtorai︠a︡ polovina XIX v.) /","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;","Pulʹs ukraïnsʹkoï nezalez︠h︡nosti :","Ukuraina no gendai seiji /"],"1960":["Russian oppression in Ukraine;","Pry dz︠h︡erelakh borotʹby :","Heĭ, tam na hori \"Sich\" ide! :","Vybrani pratsi."],"1910":["Vilʹna Ukraïna.","L'Ukraine depuis l'armistice /"],"1940":["Seredzemne more i Ukraïna /","Samostiĭna Ukraïna /","Ukraïna i Krym v istorychnykh vzai︠e︡mynakh /"],"1970":["Ferment in the Ukraine;","Lysty Dmytra Doroshenka do Vi︠a︡cheslava Lypynsʹkoho.","Vybrani statti i promovy.","Materii︠a︡ly kongresu."],"1980":["Ukrainian nationalism /","Pohrom v Ukraïni, 1972-1979 /","I︠A︡ka orii︠e︡ntat︠s︡ii︠a︡? /","Ukraine and Poland in documents, 1918-1922 /"],"1930":["Le calvaire d'un peuple :","Za diĭsne vyi︠a︡snenni︠a︡ poloz︠h︡enni︠a︡ na Radi︠a︡nsʹkiĭ Ukraïni! /","Di raṭn in ḳamf far der generaler parṭaylinye /"],"1950":["In quest of freedom, 1918-1958 :","Za chystotu pozyt︠s︡iĭ ukraïnsʹkoho vyzvolʹnoho rukhu /","Pid znakom tryvoz︠h︡noho maĭbutnʹoho :","Moskovsʹka otruta /"],"1920":["Otchet raboche-krestʹi︠a︡nskogo pravitelʹstva Ukrainy IV-mu Vseukrainskomu S'ezdu [sic] Sovetov Rabochikh, Krestʹi︠a︡nskikh i Krasnoarmeĭskikh Deputatov :"],"2010":["Proekt \"Ukraïna\", abo Tai︠e︡mnyt︠s︡i︠a︡ Mykhaĭla Hrushevsʹkoho /","Ukraïna v zoni turbulentnosti :","Poslanni︠a︡ Prezydenta Ukraïny Viktora I︠A︡nukovycha do Ukraïnsʹkoho narodu z ekspertnoi︠u︡ dopoviddi︠u︡ NISD \"Ukraïna XXI stolitti︠a︡--stratehii︠a︡ reform i suspilʹnoï konsolidat︠s︡iï\" /","100 dniv novoï vlady--i︠a︡ka modelʹ uri︠a︡duvanni︠a︡ formui︠e︡tʹsi︠a︡? /"],"1860":["Tarih-i Kaminçe."]},"antiquities":{"2000":["Les sites archéologiques en Crimée et au Caucase durant l'antiquité tardive et le haut Moyen-Age /","Ot i︠a︡zychestva k khristianstvu :","Hreky na ukraïnsʹkykh terenakh :","IV Dmitrievskie chtenii︠a︡ :"],"1990":["T︠S︡ʹoho vy ne znai︠e︡te! :","Unbekannte Krim :","Archaeological map of Nymphaion (Crimea) /","Ėtnicheskai︠a︡ istorii︠a︡ rannevizantiĭskogo Kryma /"],"1940":["Staryĭ Halych :"],"1910":["Ostrov Bi︠e︡lyĭ i Tavrika na Evksinskom Ponti︠e︡ /","Z pradziejów ziemi lwowskiej /"],"1960":["Kanivsʹke poselenni︠a︡ poli︠a︡n /","Skify Dneprovskogo lesostepnogo Levoberezhʹi︠a︡ :","Doklady, prochitannye na XI Vsesoi︠u︡znoĭ studencheskoĭ arkheologicheskoĭ konferent︠s︡ii 1965 g. v Erevane."],"1720":["Kurgany poli︠a︡n X-XII vv. /","I︠A︡mnai︠a︡ kulʹturno-istoricheskai︠a︡ oblastʹ (i︠u︡zhnobugskiĭ variant) /","Kizil-kobinskai︠a︡ kulʹtura i tavry /","Pozdnie skify v Krymu /"],"1970":["Proshloe Kaneva i ego okrestnosteĭ /","Mynule Kaneva ta ĭoho okolyt︠s︡ʹ /","Ranneskifskie kurgany basseĭna r. Ti︠a︡smin :","Ukraïna na dosvitku istorii."],"1980":["Drevnerusskoe Podnestrovʹe :","Bosporskie goroda :","Lepnai︠a︡ keramika bosporskikh gorodov /","Koroplastika Bospora :"],"1900":["Si︠e︡veri︠a︡nskai︠a︡ zemli︠a︡ i si︠e︡veri︠a︡ne po gorodishcham i mogilam /"],"1830":["O drevnosti︠a︡kh i︠u︡zhnago berega Kryma i gor Tavricheskikh /"],"2010":["The glory of Ukraine :","Ukraïnsʹki svi︠a︡tyni ta symvoly /","Ukraine from Trypillia to Rus /","Kni︠a︡z︠h︡e misto Volodymyr /"],"1860":["Putevyi︠a︡ zami︠e︡tki :"]},"foreign_relations":{"2000":["Ukraine and Russia :","Petlurowcy :","Ukraine :","Political culture and national identity in Russian-Ukrainian relations /"],"1990":["Rosja w polityce niepodległej Ukrainy /","Z istoriï mizhnarodnykh zv'i︠a︡zkiv Ukraïny :","Russia and Ukraine :","Ukraïnsʹka dyplomatii︠a︡ u XX stolitti /"],"1940":["Seredzemne more i Ukraïna /"],"1960":["Fifty years of fraud and oppression;"],"1980":["Ukraine and Poland in documents, 1918-1922 /","Anglo-American perspectives on the Ukrainian question, 1938-1951 :","Progressivnai︠a︡ grecheskai︠a︡ ėmigrat︠s︡ii︠a︡ v Odesse :","Ukraïnsʹka RSR u miz︠h︡narodno-dohovirnykh vidnosynakh :"],"1910":["Ukraïnsʹka derz︠h︡avna dumka i Evropa /"],"2010":["Ukraïna v zoni turbulentnosti :","L'Ukraine, entre intégration et partenariat =","Entwicklungsszenarien in Osteuropa-mit Schwerpunkt Ukraine /","Die Ukraine :"]},"wwii":{"1990":["--Za voli︠u︡ Ukraïny :","Ukraïna v Druhiĭ svitoviĭ i Velykiĭ Vitchyzni︠a︡niĭ viĭnakh, 1939-1945 rr. /","Krymskie repatrianty :","Ukrainian nationalism /"],"1960":["Ukrainian nationalism.","U nastupakh i vidstupakh :","Rozkaz︠h︡u vam pro Kazakhstan :"],"1950":["Orhanizat︠s︡ii︠a︡ ukraïnsʹkykh nat︠s︡ionalistiv pidchas Druhoï Svitovoï viĭny /","Spomyny chotovoho Ostroverkha : khronika Taktychnykh vidtynkiv UPA \"Lemko\" i \"Makivka\", 1944-1948.","Krizʹ smikh zaliza :","Ïdesh, brate miĭ-- :"],"1980":["Ukrainian nationalism /","Truth and myths about UPA /","Odyn rik u Chervoniĭ Armiï :","The restoration of the Ukrainian state in World War II."],"2000":["Promizhnyĭ zvit robochoĭ hrupy dli︠a︡ pidhotovky istorychnoho vysnovku pro dii︠a︡lʹnistʹ OUN-UPA :","Polacy we Lwowie, 1939-1944 :","Střetnutí věků /","I heard my people cry :"],"2010":["Kolyska rodynna /","Trahedii︠a︡ ukraïnsʹko-polʹsʹkoho protystoi︠a︡nni︠a︡ na Volyni 1938-1944 rokiv :","Teorii︠a︡ i praktika zapadnoukrainskogo nat︠s︡ionalizma v dokumentakh NKVD, MVD i MGB SSSR, 1939-1956 :","Świat rzeczywisty-świat zapamiętany :"]},"revolution":{"1990":["Erinnerungen 1917 bis 1918 /","Ukraïnsʹki vyzvolʹni zmahanni︠a︡ 1917-1921 rr. /","Ukraïnsʹka revoli︠u︡t︠s︡ii︠a︡  :","Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :"],"1980":["Mälestused Krimmist /","Statʹi, rechi, pisʹma /","Komandarm Dubovoĭ /","Postupʹ Velikogo Okti︠a︡bri︠a︡ :"],"2000":["Ukraińska idea narodowa okresu międzywojennego :","Odessa 1917 :","Petlurowcy :","Medvyn v ohni istoriï :"],"1920":["Inhuman blockade strangling a nation :","Pro Sichovykh Strilʹt︠s︡iv /"],"1940":["Prychynky do istoriï ukraïnsʹkoï revoli︠u︡tsiï."],"1950":["Za velych natsiï /","Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :","Vyzvolʹna borotʹba na zakhidnʹo-ukraïnsʹkykh zemli︠a︡kh u 1918-1923 rokakh /"],"1960":["Pry dz︠h︡erelakh borotʹby :","Vyhnaty okupanta /"],"1970":["Pisni︠a︡ pro chervonu kalynu, 1914-1974.","Nestor Makhno :","Z viĭsʹkovoho hnizda :","U 50-richchi︠a︡ Zymovoho pokhodu armiï UNR ="],"1930":["I︠U︡vileĭna pami︠a︡tka, 1887-1937 :"],"2010":["Otaman Orlyk /","Proekt \"Ukraïna\", abo Krakh Symona Petli︠u︡ry /","Ukraïnsʹka amazonka Oleksandra Sokolovsʹka (otamansha \"Marusi︠a︡\") /","Die Ukraine :"]},"nationalism":{"1990":["Stepan Lenkavsʹkyĭ :","Erinnerungen 1917 bis 1918 /","Bitter truth :","Etnos i nat︠s︡ii︠a︡ :"],"2000":["Ukraińska idea narodowa okresu międzywojennego :","\"Ukrainskiĭ vopros\" v politike vlasteĭ i russkom obshchestvennom mnenii (vtorai︠a︡ polovina XIX v.) /","Litopys UPA--chas, podiï, dz︠h︡erela :","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;"],"1940":["UPA in Western Europe.","Samostiĭna Ukraïna /","The Ukrainian problem /"],"1950":["Akt vidnovlenni︠a︡ ukraïnsʹkoï derz︠h︡avnosty 30. chervni︠a︡ 1941 roku :","Moscow and the Ukraine, 1918-1953;","Statti, lysty, dokumenty /","Ukraïnsʹkyĭ robitnyĭ li︠u︡d u borotʹbi za nat︠s︡ionalʹnu derz︠h︡avu /"],"1960":["Ukrainian nationalism.","Ukraïnsʹkyĭ nat︠s︡ionalizm.","Heĭ, tam na hori \"Sich\" ide! :","Vybrani pratsi."],"1970":["Ferment in the Ukraine;","Zaborona ukraïnstva tysi︠a︡cha visimsot simdesi︠a︡t shostyĭ r. 1876 p.","Materii︠a︡ly kongresu.","Kyiv versus Moscow;"],"1980":["Ukrainian nationalism /","I︠A︡ka orii︠e︡ntat︠s︡ii︠a︡? /","Memoranda of the Ukrainian National Government in Exile :","The Mazepists :"],"1920":["Zi spomyniv Myroslava Sichynsʹkoho /","Velyka revoli︠u︡t︠s︡ii︠a︡ i ukraïnsʹka vyzvolʹna programa :","Derz︠h︡avni zmahanni︠a︡ Prykarpat︠s︡ʹkoï Ukraïny /"],"1910":["T︠S︡arsʹka Rosii︠a︡ i ukraïnsʹka sprava /","Narodnistʹ i ïï pochatky /","Ukraïnsʹka derz︠h︡avna dumka i Evropa /"],"2010":["Borderlands into bordered lands :","Teorii︠a︡ i praktika zapadnoukrainskogo nat︠s︡ionalizma v dokumentakh NKVD, MVD i MGB SSSR, 1939-1956 :","Die Ukraine :","\"Osobye papky\" Stalina i Molotova pro nat︠s︡ionalʹno-vyzvolʹnu borotʹbu v Zakhidniĭ Ukraïni u 1944-1948 rr. :"]},"famine":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Mezhdunarodnai︠a︡ komissii︠a︡ po rassledovanii︠u︡ goloda na Ukraine 1932-1933 godov :","Investigation of the Ukrainian famine, 1932-1933 :","Lettere da Kharkov :"],"2000":["Henot︠s︡yd :","Strashna pravda holodomoru :","Holodomory v Ukraïni 1921-1923, 1932-1933, 1946-1947 :","Holodovka, 1932-1933 roky na Perei︠a︡slavshchyni :"],"1950":["The Golgotha of Ukraine :","Naĭbilʹshyĭ zlochyn Kremli︠a︡ :","V dev'i︠a︡tim kruzi-- /","The ninth circle /"],"1960":["Moskva slʹozam ne virytʹ :","Organized famine in Ukraine, 1932-1933 /","Stalinsʹko-khrushchovsʹke okhvisti︠a︡ /","Orhanizovanyĭ holod v Ukraïni 1932-1933 /"],"1920":["Hunger in der Ukraine /","Holod na Ukraïni :"],"1930":["Lykholitti︠a︡ Ukraïny /","Famine in Ukraine."],"1970":["Memorandum from the World Congress of Free Ukrainians to the General Secretary of United Nations, Hon. Dr Kurt Waldheim.","Ukraïnsʹkyĭ \"Holokost\", 1933 /"],"1980":["The ninth circle :","Holod na Ukraïni i \"tai︠e︡mnycha ruka\" /","The agony of a nation :","50 years ago :"],"2010":["Holodomor, famine in Ukraine, 1932-1933","Uprazhnenii︠a︡ s istorieĭ po-ukrainski /","Golodomor /","Holodomor bibliography :"]}},"themeTotals":{"antiquities":435,"foreign_relations":281,"nationalism":665,"revolution":234,"famine":280,"politics":1010,"wwii":196},"themeTotalsWithYear":{"antiquities":425,"foreign_relations":268,"nationalism":584,"revolution":213,"famine":276,"politics":915,"wwii":164},"totalRecords":7093,"matchedAnyCount":2588,"noPubYCount":207};
+const DATA = {"yearMin":1727,"yearMax":2016,"years":[1727,1728,1729,1730,1731,1732,1733,1734,1735,1736,1737,1738,1739,1740,1741,1742,1743,1744,1745,1746,1747,1748,1749,1750,1751,1752,1753,1754,1755,1756,1757,1758,1759,1760,1761,1762,1763,1764,1765,1766,1767,1768,1769,1770,1771,1772,1773,1774,1775,1776,1777,1778,1779,1780,1781,1782,1783,1784,1785,1786,1787,1788,1789,1790,1791,1792,1793,1794,1795,1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822,1823,1824,1825,1826,1827,1828,1829,1830,1831,1832,1833,1834,1835,1836,1837,1838,1839,1840,1841,1842,1843,1844,1845,1846,1847,1848,1849,1850,1851,1852,1853,1854,1855,1856,1857,1858,1859,1860,1861,1862,1863,1864,1865,1866,1867,1868,1869,1870,1871,1872,1873,1874,1875,1876,1877,1878,1879,1880,1881,1882,1883,1884,1885,1886,1887,1888,1889,1890,1891,1892,1893,1894,1895,1896,1897,1898,1899,1900,1901,1902,1903,1904,1905,1906,1907,1908,1909,1910,1911,1912,1913,1914,1915,1916,1917,1918,1919,1920,1921,1922,1923,1924,1925,1926,1927,1928,1929,1930,1931,1932,1933,1934,1935,1936,1937,1938,1939,1940,1941,1942,1943,1944,1945,1946,1947,1948,1949,1950,1951,1952,1953,1954,1955,1956,1957,1958,1959,1960,1961,1962,1963,1964,1965,1966,1967,1968,1969,1970,1971,1972,1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016],"smoothWindow":5,"bandOrder":["intellectual_cultural","social_economic","local_military_history","people","historiography","description_travel","political_persecution","ethnic_relations","oun_upa","ethnic_groups","euromaidan","nationalism","revolution","wwii","famine","foreign_relations","politics","antiquities","other"],"bandLabel":{"intellectual_cultural":"Intellectual & cultural life","social_economic":"Social & economic conditions","local_military_history":"Local & military history","people":"People","historiography":"Historiography & historians","description_travel":"Description & travel","political_persecution":"Political persecution & prisoners","ethnic_relations":"Ethnic relations","oun_upa":"OUN & UPA (nationalist underground)","ethnic_groups":"Ethnic groups","euromaidan":"Euromaidan Protests, 2013–2014","nationalism":"Nationalism & independence movements","revolution":"Revolution & Civil War, 1917–21","wwii":"World War II, 1939–1945","famine":"Famine (Holodomor)","foreign_relations":"Foreign relations","politics":"Politics and government","antiquities":"Antiquities","other":"Other topics"},"bandColor":{"intellectual_cultural":"#9b971e","social_economic":"#ef25d0","local_military_history":"#7da21e","people":"#24a4b1","historiography":"#af8e1f","description_travel":"#25a89a","political_persecution":"#a8632f","ethnic_relations":"#2a9dc4","oun_upa":"#e66767","ethnic_groups":"#b623f5","euromaidan":"#e0507a","nationalism":"#008300","revolution":"#d55181","wwii":"#c98500","famine":"#9085e9","foreign_relations":"#199e70","politics":"#3987e5","antiquities":"#d95926","other":null},"bandTexture":{"intellectual_cultural":null,"social_economic":null,"local_military_history":null,"people":null,"historiography":null,"description_travel":null,"political_persecution":null,"ethnic_relations":null,"oun_upa":null,"ethnic_groups":null,"euromaidan":null,"nationalism":null,"revolution":null,"wwii":null,"famine":null,"foreign_relations":null,"politics":null,"antiquities":null,"other":{"type":"lines","angle":45,"spacing":3.5,"weight":2.25,"tone":"#a9a89f"}},"bandMatch":{"intellectual_cultural":["Cultural policy","Cultural property","Folklore","Intellectual life","Philosophy","Ukrainian language","Ukrainian philology"],"social_economic":["Economic conditions","Population","Rural conditions","Social conditions"],"local_military_history":["History, Local","History, Military"],"people":["(any named-person heading, e.g. \"Surname, First, 1900-1980\")"],"historiography":["Historians","Historiography","History and criticism","Research","Ukrainianists"],"description_travel":["Description and travel","Tours","Travel"],"political_persecution":["Political persecution","Political prisoners"],"ethnic_relations":["Ethnic relations"],"oun_upa":["Orhanizatsiia ukrainskikh natsionalistiv","Ukrainska povstanska armiia","Orhanizat","povstansʹka armii"],"ethnic_groups":["Armenians","Bulgarians","Carpatho-Rusyns","Germans","Greeks","Hungarians","Hutsuls","Jews","Minorities","Russians"],"euromaidan":["Euromaidan"],"nationalism":["Nationalism","Autonomy and independence movements"],"revolution":["Revolution, 1917-1921"],"wwii":["World War, 1939-1945"],"famine":["Famine","Famines"],"foreign_relations":["Foreign relations"],"politics":["Politics and government"],"antiquities":["Antiquities"],"other":["(every other non-geographic, non-form, non-date-only heading segment)"]},"series":{"intellectual_cultural":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,2,0,1,0,0,0,0,0,0,0,0,0,0,1,3,2,1,3,0,4,7,3,5,5,10,5,14,15,13,12,18,23,15,14,22,18,18,17,28,15,15,7,5,12,14,12,6,4,2,0],"social_economic":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,0,0,2,0,0,0,0,2,1,0,2,3,4,5,4,3,2,5,1,4,6,6,11,14,11,7,7,4,5,4,7,7,4,4,1,0],"local_military_history":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,4,3,4,5,4,3,0,3,1,2,2,1,4,2,2,0,0,1,1,1,4,2,1,1,3,1,4,3,4,8,4,11,5,7,15,15,8,19,19,34,5,8,10,10,6,16,4,1],"people":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,2,1,1,1,1,0,1,2,1,0,0,0,1,1,1,0,1,1,1,1,1,1,2,1,2,3,3,4,2,2,9,4,7,4,11,9,4,6,24,21,29,22,22,23,24,41,39,37,40,43,32,52,60,42,42,33,22,35,37,22,24,14,4,0],"historiography":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,2,0,2,2,1,4,4,2,4,7,4,2,2,8,9,16,8,4,16,9,17,11,14,8,15,15,13,17,17,19,13,10,13,21,14,11,4,0,0],"description_travel":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,1,0,1,0,0,0,1,0,1,0,0,0,0,0,0,1,2,1,0,4,2,1,1,1,4,3,1,4,6,4,3,5,3,5,2,5,11,14,6,16,6,10,8,11,17,13,7,3,4,6,4,6,6,1,0],"political_persecution":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,3,3,0,2,1,1,1,1,5,5,14,14,3,10,10,13,8,12,15,20,20,18,24,11,8,17,12,11,7,7,11,9,1,0],"ethnic_relations":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,3,1,1,0,1,2,2,1,1,4,2,6,8,5,3,6,7,9,9,8,8,6,4,10,9,10,6,3,6,2,1,4,3,0,1],"oun_upa":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,2,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,1,1,1,1,0,2,1,4,1,2,3,1,2,3,7,2,7,4,6,13,6,13,16,19,16,7,9,18,16,14,3,9,12,16,2,5,4,3,0],"ethnic_groups":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,1,1,0,0,0,0,1,0,1,1,1,0,1,1,1,1,0,0,2,1,2,4,4,5,17,9,9,4,4,12,16,18,10,13,11,7,14,6,6,7,4,7,5,4,3,1,2,1],"euromaidan":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,42,14,0],"nationalism":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,2,2,3,1,2,3,0,1,0,1,0,0,1,0,2,2,2,1,1,4,1,1,1,2,1,0,0,3,2,7,14,3,11,5,6,2,7,4,1,3,5,8,23,16,17,23,26,26,29,33,25,35,21,26,27,25,17,13,13,12,14,9,6,16,8,0],"revolution":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,0,1,0,0,0,0,0,0,0,0,1,1,0,1,3,2,0,0,1,0,1,0,1,0,2,0,0,1,3,1,1,0,3,4,9,5,11,5,7,10,10,8,5,12,11,14,8,8,6,12,4,7,7,6,9,5,0,0],"wwii":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,2,1,2,2,4,1,0,2,2,1,4,1,2,2,3,4,7,4,7,10,13,11,8,11,7,10,8,7,9,13,4,6,5,6,1,1],"famine":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1,0,0,0,1,0,0,0,0,2,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,8,2,2,3,1,20,0,3,3,2,14,0,1,2,2,3,2,4,3,4,17,7,9,11,15,85,12,3,7,2,7,2,3,0],"foreign_relations":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,2,1,2,1,2,2,0,4,4,7,4,4,3,3,7,17,14,10,15,20,21,23,22,27,18,19,17,16,19,30,15,19,18,22,13,11,39,32,2],"politics":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,0,0,0,2,0,0,2,0,2,0,0,1,2,1,0,1,1,0,3,2,3,1,0,1,2,3,4,1,5,6,3,13,7,6,7,9,3,8,6,6,20,25,26,23,32,24,33,26,36,42,42,31,30,35,55,44,33,30,33,36,32,20,53,32,0],"antiquities":[4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,2,0,0,3,0,0,0,1,1,0,0,0,0,9,11,6,11,13,10,14,12,13,15,16,16,13,17,7,10,11,24,24,15,13,17,22,31,30,28,23,21,10,26,15,13,11,7,0,0],"other":[2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,2,1,1,1,1,0,0,0,0,2,1,0,2,2,0,2,0,2,0,1,0,1,1,0,0,1,0,0,1,0,3,2,0,0,2,4,5,2,1,1,5,1,2,1,2,0,1,3,3,3,0,1,4,5,2,3,5,5,2,3,6,11,13,19,21,26,26,23,26,29,34,24,33,40,52,86,75,70,71,77,104,108,107,110,130,107,143,149,147,145,146,77,121,126,85,77,92,47,3]},"decadeTitles":{"intellectual_cultural":{"1990":["Istoriosofii︠a︡ ta sot︠s︡ialʹna filosofii︠a︡ Mykhaĭla Drahomanova /","Madarak voltunk-- :","Ukraïnsʹka onomastyka :","Onomastyka Ukraïny ta etnohenez skhidnykh slov'i︠a︡n /"],"2000":["Pobeda /","XX stolitti︠a︡ ta ukraïnsʹka li︠u︡dyna--vyklyky i vidpovidi /","Zahratovana dumka /","Publit︠s︡yst mysli ĭ sert︠s︡i︠a︡ :"],"1900":["Huculszczyzna /"],"1960":["Lykho z rozumu :","Renesans, reformat︠s︡ii︠a︡, revoli︠u︡t︠s︡ii︠a︡ /","Abstracts of papers ="],"1950":["Alʹmanakh \"Molodoï Ukraïny\" :","Na marginesi knyz︠h︡ky I︠U︡rii︠a︡ Smolycha \"Z narodom chy proty narodu?\" /"],"1980":["Rozvytok kulʹtury v Ukraïnsʹkiĭ RSR /","Cultural policy in the Ukrainian Soviet Socialist Republic /","Rozdumy na skhylku z︠h︡ytti︠a︡ /","Zbirnyk na poshanu prof. d-ra Volodymyra I︠A︡neva /"],"1920":["Zbirnyk materii︠a︡liv Odesʹkoï krai︠e︡voï komisiï dli︠a︡ okhorony pam'i︠a︡tok materii︠a︡lʹnoï kulʹtury ta pryrody."],"2010":["Mahii︠a︡ tvorchosti :","Gorzhusʹ, chto i︠a︡--ukrainet︠s︡ /","Inshomovni toponimy Ukraïny :","Gelebte Multikulturalität :"]},"social_economic":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Rát :","Sluzhba informat︠s︡iĭno-analitychnoho zabezpechenni︠a︡ orhaniv derz︠h︡avnoï vlady (SIAZ) :","Dokumentalʹni publikat︠s︡iï z istoriï Ukraïnsʹkoï RSR :"],"2000":["XX stolitti︠a︡ ta ukraïnsʹka li︠u︡dyna--vyklyky i vidpovidi /","Naselenni︠a︡ Bukovyny :","Die sozialistische Transformation der Ukraine, 1917-1934","The Ukrainian diaspora /"],"1960":["Zaselenni︠a︡ Pivdennoï Ukraïny /","Na novomu etapi /"],"1920":["Hunger in der Ukraine /","Holod na Ukraïni :"],"1970":["Ethnocide of Ukrainians in the U.S.S.R., spring 1974 :","Ethnocide des Ukrainiens en URSS :","Ideĭni osnovy ukraïnsʹkoï kooperat︠s︡iï v dii︠a︡spori :"],"1980":["Na magistrali︠a︡kh doby :","Ukraine after Shelest /","The Foreign Office and the famine :","Suspilʹno-politychnyĭ rozvytok zakhidnykh oblasteĭ URSR, 1939-1989 :"],"1950":["Severnoe Prichernomorʹe v 1775-1800 gg. /"],"2010":["Kırım Karasubazar'da sosyo-ekonomik hayat :","Beyond colours :","Taking land :","Die Ukraine im Wandel"]},"local_military_history":{"1990":["Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :","Bohdan Khmelʹnyt︠s︡ʹkyĭ i voi︠e︡nne mystet︠s︡tvo u Vyzvolʹniĭ viĭni ukraïnsʹkoho narodu seredyny XVII stolitti︠a︡ /","Tavricheskie tatarskie diviziony beshleĭskogo voĭska, 1784-1796 :","Pro shcho spivai︠e︡ na istorychnykh vitrakh kovyla syvykh kozat︠s︡ʹkykh mohyl :"],"1960":["Kharkivsʹka oblastʹ /","Lʹvivsʹka oblastʹ /","Poltavsʹka oblastʹ /","Chernivet︠s︡ʹka oblastʹ /"],"1970":["Ivano-Frankivsʹka oblastʹ /","Kyïvsʹka oblastʹ /","Khmelʹnyt︠s︡ʹka oblastʹ /","Mykolaïvsʹka oblastʹ /"],"1980":["Sumskai︠a︡ oblastʹ /","Zaporozhskai︠a︡ oblastʹ /","Letopisʹ druzhby i bratstva :","Nikolaevskai︠a︡ oblastʹ /"],"2000":["Above and beyond :","Ukraïnsʹka kozat︠s︡ʹka derz︠h︡ava :","Istorychna rehionalistyka v Ukraïni :","Ilustrowany przewodnik po zabytkach kultury na Ukrainie /"],"2010":["Bytvy za ukraïnsʹki zemli /","Karpatsʹka sich :","Mykhaĭlo Krat :","Hidronimii︠a︡ Ivano-Frankivshchyny :"]},"people":{"1990":["Universaly Bohdana Khmelʹnyt︠s︡ʹkoho, 1648-1657 /","Istoriosofii︠a︡ ta sot︠s︡ialʹna filosofii︠a︡ Mykhaĭla Drahomanova /","Bahaliïvsʹki chytanni︠a︡ v NUA :","Spohady /"],"2000":["Strashna pravda holodomoru :","Arseniĭ Ivanovich Markevich :","Vo im'i︠a︡ Tvoi︠e︡ :","Above and beyond :"],"1940":["Bogdan Khmelʹnit︠s︡kiĭ."],"1950":["Symon Petli︠u︡ra,","Statti, lysty, dokumenty /","Za velych natsiï /","Ivan Mazepa."],"1960":["Pry dz︠h︡erelakh borotʹby :","Avtobiohrafii︠a︡ = Autobiography.","U nastupakh i vidstupakh :","Rozkaz︠h︡u vam pro Kazakhstan :"],"1970":["Lysty Dmytra Doroshenka do Vi︠a︡cheslava Lypynsʹkoho.","On the eve of Poltava :","Nestor Makhno :","Pamiętnik mojego życia /"],"1980":["Vi︠a︡cheslav Lypynsʹkyĭ--tvory /","The Mazepists :","Symon Petli︠u︡ra :","Nat︠s︡ionalʹno-politychni pohli︠a︡dy M. Drahomanova, ïkh vplyv ta znachinni︠a︡ /"],"1920":["Zi spomyniv Myroslava Sichynsʹkoho /"],"1900":["Bogdan Khmelʹnit︠s︡kīĭ getman Malorossīi :"],"1930":["I︠U︡vileĭna pami︠a︡tka, 1887-1937 :","Nevdala rehabilitat︠s︡ii︠a︡ Sushka--ubiĭnyka :"],"2010":["Proekt \"Ukraïna\", abo Tai︠e︡mnyt︠s︡i︠a︡ Mykhaĭla Hrushevsʹkoho /","Otaman Orlyk /","Proekt \"Ukraïna\", abo Krakh Symona Petli︠u︡ry /","Mykhaĭlo Hrushevsʹkyĭ /"],"1860":["Putevyi︠a︡ zami︠e︡tki :","Tarih-i Kaminçe."]},"historiography":{"1990":["Litopyset︠s︡ʹ karpatsʹkoho sela :","Taka nasha doli︠a︡ :","Epistoli︠a︡rna spadshchyna akademika D.I.  I︠A︡vornyt︠s︡ʹkoho /","Narodnyt︠s︡tvo v Ukraïni 60-80-kh rokiv XIX stolitti︠a︡ :"],"2000":["Pobeda /","Koly istorii︠a︡, i︠a︡k nezahoĭna rana-- :","Vidomyĭ istoryk Ukraïny M.O. Maksymovych /","Oleksander Mezʹko-Ohloblyn :"],"1950":["Ukraïnsʹka istorychna nauka pid Sovi︠e︡tamy, 1920-1950.","Na holovniĭ magistrali /"],"1970":["The Eyewitness chronicle.","Avtobiohrafii︠a︡ Mykhaĭla Hrushevsʹkoho z 1906 i 1926 rokiv i︠a︡k dz︠h︡erelo do vyvchenni︠a︡ ĭoho z︠h︡ytti︠a︡ i tvorchosty /","Pami︠a︡ty [sic] Mykhaĭla Drahomanova /","Dyvni sposoby vypravduvanni︠a︡ antyderz︠h︡avnoï polityky :"],"1980":["Dz︠h︡erela pro rosiĭsʹko-ukraïnsʹki politychni zvʹi︠a︡zky v roky vyzvolʹnoï viĭny ukraïnsʹkoho narodu, 1648-1654 /","Dz︠h︡ereloznavstvo z istoriï Ukraïnsʹkoï RSR, 1917-1941 /","Rozvytok kulʹtury v Ukraïnsʹkiĭ RSR /","Pereiaslav 1654 :"],"1940":["The problems of modern Ukrainian historiography /"],"2010":["Istorii︠a︡ arkheolohichnykh doslidz︠h︡enʹ ta istorychnoho krai︠e︡znavstva Volyni /","Proekt \"Ukraïna\", abo Krakh Symona Petli︠u︡ry /","Saul Borovyĭ :","Mykhaĭlo Hrushevsʹkyĭ /"],"1860":["Putevyi︠a︡ zami︠e︡tki :"]},"description_travel":{"1990":["Partenitskai︠a︡ dolina ot mori︠a︡ i do gor :","Kyïv =","Kárpátaljai útravaló :","Apropos Czernowitz :"],"1980":["Mälestused Krimmist /","Khrestomatii︠a︡ z heohrafiï Ukraïnsʹkoï RSR :","Navigare necesse-- :","Sovestʹ vzyvaet k miru :"],"1900":["Huculszczyzna /"],"1940":["Chuz︠h︡ynt︠s︡i pro Ukraïnu.","Heohrafii︠a︡ ukraïnsʹkykh i sumez︠h︡nykh zemelʹ /"],"1950":["Vyznachni mist︠s︡i︠a︡ Ukraïny."],"1970":["[Putevyi︠a︡ vpechatli︠e︡nīi︠a︡ :","V puteshestvie po Sumshchine :","Visim podoroz︠h︡eĭ po Cherkashchyni :","Sudak :"],"1960":["Opryshkivsʹke hnizdo /","Beskydom Zelenym, u try rʹi︠a︡dy sadz︠h︡enym /","Pochatkova heohrafii︠a︡ Ukraïny /","Shli︠a︡khamy Kyïvshchyny :"],"1890":["Tretʹi︠a︡ Uchebnai︠a︡ ėkskursīi︠a︡ Simferopolʹskoĭ muzhskoĭ gimnazīi :","Résidences impériales et villes mortes de Crimée /"],"2000":["Return to Ukraine /","Our Ukrainian adventure /","Naselenni︠a︡ Bukovyny :","Piligrimy Kryma--osenʹ '99 :"],"2010":["Krimmi päevik :","Metafizyka Karpat /","Eestlaste unistuste ja mälestuste Krimm :","120 luchshikh mest Ukrainy :"],"1860":["Putevyi︠a︡ zami︠e︡tki :"]},"political_persecution":{"1990":["V poloni zla :","Mezhdunarodnai︠a︡ komissii︠a︡ po rassledovanii︠u︡ goloda na Ukraine 1932-1933 godov :","Memorial Ivano-Frankivshchyny :","Krymskie repatrianty :"],"2000":["Henot︠s︡yd :","Vo im'i︠a︡ Tvoi︠e︡ :","The Crimean Tatars :","Holodomory v Ukraïni 1921-1923, 1932-1933, 1946-1947 :"],"1970":["Ukraïnsʹkyĭ \"Holokost\", 1933 /","Spohady /","Instead of a final statement /"],"1980":["50 years ago :","Who killed them and why? :","Rosiĭshchenni︠a︡ Ukraïny :","The Ukrainian holocaust of 1933 /"],"2010":["Rukh oporu v Ukraïni 1960-1990 :","Trahedii︠a︡ ukraïnsʹko-polʹsʹkoho protystoi︠a︡nni︠a︡ na Volyni 1938-1944 rokiv :","\"Cherez trupy vraga na blago naroda\" :","Volodymyr-Volynsʹkyĭ u borotʹbi za nezalez︠h︡nistʹ /"],"1930":["Na vichnu hanʹbu Polʹshchi, tverdyni varvarstva v Evropi."]},"ethnic_relations":{"2000":["Fond 252, Odessa Office for Foreign Settlers in Southern Russia (1806, 1807, 1814-1834, 1843, 1850) :","Napływ szlachty polskiej na Ukrainę, 1569-1648 /","Krymchaki :","Ocherki po istorii krymskikh karaimov-ti︠u︡rkov /"],"1990":["Istoricheskiĭ opyt mezhnat︠s︡ionalʹnogo i mezhkonfessionalʹnogo soglasii︠a︡ v Krymu /","The Hungarians in Transcarpathia /","Mariupolʹsʹki hreky :","Krymskie repatrianty :"],"1980":["The Ukrainians and Georgians /","Vybrani statti z nat︠s︡ionalʹnoho pytanni︠a︡ /","Lekt︠s︡iï z istoriï Ukraïny /","Rosiĭshchenni︠a︡ Ukraïny :"],"1960":["Ukrainsko-armi︠a︡nskie svi︠a︡zi v XVII veke :"],"1930":["Miz︠h︡ Madi︠a︡rshchynoi︠u︡, Polʹshchei︠u︡ ĭ Chekhoslovachchynoi︠u︡ /"],"2010":["Gelebte Multikulturalität :","Volodymyr-Volynsʹkyĭ u borotʹbi za nezalez︠h︡nistʹ /","Ocalić od zapomnienia :","Kriegserfahrungen in einer multiethnischen Stadt :"]},"oun_upa":{"1990":["Stepan Lenkavsʹkyĭ :","Bitter truth :","Perspektyvy ukraïnsʹkoï revoli︠u︡t︠s︡iï /","Narysy istoriï Orhanizat︠s︡iï ukraïnsʹkykh nat︠s︡ionalistiv v 1941-1942 rr. /"],"2000":["Litopys UPA--chas, podiï, dz︠h︡erela :","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;","Vo im'i︠a︡ Tvoi︠e︡ :","Promizhnyĭ zvit robochoĭ hrupy dli︠a︡ pidhotovky istorychnoho vysnovku pro dii︠a︡lʹnistʹ OUN-UPA :"],"1940":["UPA in Western Europe.","Horodok I︠A︡haĭlonsʹkyĭ /"],"1950":["Akt vidnovlenni︠a︡ ukraïnsʹkoï derz︠h︡avnosty 30. chervni︠a︡ 1941 roku :","Orhanizat︠s︡ii︠a︡ ukraïnsʹkykh nat︠s︡ionalistiv pidchas Druhoï Svitovoï viĭny /","Spomyny chotovoho Ostroverkha : khronika Taktychnykh vidtynkiv UPA \"Lemko\" i \"Makivka\", 1944-1948.","Krizʹ smikh zaliza :"],"1960":["U nastupakh i vidstupakh :","Idei︠a︡ i chyn :"],"1970":["Perspektyvy ukraïnsʹkoï revoli︠u︡t︠s︡iï /","Ukraïna--spilʹne dobro vsikh ïï hromadi︠a︡n :","Rozdumy nad odnii︠e︡i︠u︡ knyz︠h︡koi︠u︡ :","Shli︠a︡khom Legendy :"],"1980":["Truth and myths about UPA /","Afraid of justice, who and why? /","Z tai︠e︡mnykh dokumentiv polʹsʹkoï okupat︠s︡iï Zakhidnʹoï Ukraïny /","Z idei︠e︡i︠u︡ v sert︠s︡i--zi zbroi︠e︡i︠u︡ v rukakh :"],"2010":["Z︠H︡ytti︠e︡vyĭ shli︠a︡kh Halyny Holoi︠a︡d--\"Marty Haĭ\" /","Z︠H︡ytti︠a︡ ta doli︠a︡ Mykhaĭla Di︠a︡chenka--\"Marka Boi︠e︡slava\" /","Orhanizat︠s︡ii︠a︡ ukraïnsʹkykh nat︠s︡ionalistiv (banderivt︠s︡i) :","Velykyĭ ukraïnet︠s︡ʹ iz Ternopilli︠a︡ :"]},"ethnic_groups":{"2000":["Fond 252, Odessa Office for Foreign Settlers in Southern Russia (1806, 1807, 1814-1834, 1843, 1850) :","Greki v istorii Kryma :","Hreky na ukraïnsʹkykh terenakh :","Fond 53, Grossliebental (Mariinsky) Volost Office, 1815, 1850, 1852-1920 :"],"1990":["The Hungarians in Transcarpathia /","Archaeological map of Nymphaion (Crimea) /","Mariupolʹsʹki hreky :","Kárpátaljai útravaló :"],"1900":["Huculszczyzna /"],"1970":["Istorii︠a︡ Hut︠s︡ulʹshchyny /","Deutsch-Mokra, Königsfeld :","Ruténsors :","Do voli :"],"1960":["Doklady, prochitannye na XI Vsesoi︠u︡znoĭ studencheskoĭ arkheologicheskoĭ konferent︠s︡ii 1965 g. v Erevane.","Opryshkivsʹke hnizdo /","Beskydom Zelenym, u try rʹi︠a︡dy sadz︠h︡enym /","Ukrainsko-armi︠a︡nskie svi︠a︡zi v XVII veke :"],"1920":["Hut︠s︡uly ĭ Hut︠s︡ulʹshchyna /"],"1980":["Vybrani statti z nat︠s︡ionalʹnoho pytanni︠a︡ /","Hē prōtē patrida /","Moskovshchina /","Progressivnai︠a︡ grecheskai︠a︡ ėmigrat︠s︡ii︠a︡ v Odesse :"],"1930":["Miz︠h︡ Madi︠a︡rshchynoi︠u︡, Polʹshchei︠u︡ ĭ Chekhoslovachchynoi︠u︡ /"],"2010":["Saul Borovyĭ :","Kulʹturnye tradit︠s︡ii Ėllady v antichnykh gosudarstvakh Severnogo Prichernomorʹi︠a︡ /","Paul Robert Magocsi :","Barangolások Kárpátalján :"]},"euromaidan":{"2010":["The Maidan Uprising, separatism and foreign intervention :","Conflict in Ukraine :","Kiew-Revolution 3.0 :","[Euromaidan protests in Ukraine, 2013-2014 ephemera."]},"nationalism":{"1990":["Stepan Lenkavsʹkyĭ :","Erinnerungen 1917 bis 1918 /","Bitter truth :","Etnos i nat︠s︡ii︠a︡ :"],"2000":["Ukraińska idea narodowa okresu międzywojennego :","\"Ukrainskiĭ vopros\" v politike vlasteĭ i russkom obshchestvennom mnenii (vtorai︠a︡ polovina XIX v.) /","Litopys UPA--chas, podiï, dz︠h︡erela :","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;"],"1940":["UPA in Western Europe.","Samostiĭna Ukraïna /","The Ukrainian problem /"],"1950":["Akt vidnovlenni︠a︡ ukraïnsʹkoï derz︠h︡avnosty 30. chervni︠a︡ 1941 roku :","Moscow and the Ukraine, 1918-1953;","Statti, lysty, dokumenty /","Ukraïnsʹkyĭ robitnyĭ li︠u︡d u borotʹbi za nat︠s︡ionalʹnu derz︠h︡avu /"],"1960":["Ukrainian nationalism.","Ukraïnsʹkyĭ nat︠s︡ionalizm.","Heĭ, tam na hori \"Sich\" ide! :","Vybrani pratsi."],"1970":["Ferment in the Ukraine;","Zaborona ukraïnstva tysi︠a︡cha visimsot simdesi︠a︡t shostyĭ r. 1876 p.","Materii︠a︡ly kongresu.","Kyiv versus Moscow;"],"1980":["Ukrainian nationalism /","I︠A︡ka orii︠e︡ntat︠s︡ii︠a︡? /","Memoranda of the Ukrainian National Government in Exile :","The Mazepists :"],"1920":["Zi spomyniv Myroslava Sichynsʹkoho /","Velyka revoli︠u︡t︠s︡ii︠a︡ i ukraïnsʹka vyzvolʹna programa :","Derz︠h︡avni zmahanni︠a︡ Prykarpat︠s︡ʹkoï Ukraïny /"],"1910":["T︠S︡arsʹka Rosii︠a︡ i ukraïnsʹka sprava /","Narodnistʹ i ïï pochatky /","Ukraïnsʹka derz︠h︡avna dumka i Evropa /"],"2010":["Borderlands into bordered lands :","Teorii︠a︡ i praktika zapadnoukrainskogo nat︠s︡ionalizma v dokumentakh NKVD, MVD i MGB SSSR, 1939-1956 :","Die Ukraine :","\"Osobye papky\" Stalina i Molotova pro nat︠s︡ionalʹno-vyzvolʹnu borotʹbu v Zakhidniĭ Ukraïni u 1944-1948 rr. :"]},"revolution":{"1990":["Erinnerungen 1917 bis 1918 /","Ukraïnsʹki vyzvolʹni zmahanni︠a︡ 1917-1921 rr. /","Ukraïnsʹka revoli︠u︡t︠s︡ii︠a︡  :","Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :"],"1980":["Mälestused Krimmist /","Statʹi, rechi, pisʹma /","Komandarm Dubovoĭ /","Postupʹ Velikogo Okti︠a︡bri︠a︡ :"],"2000":["Ukraińska idea narodowa okresu międzywojennego :","Odessa 1917 :","Petlurowcy :","Medvyn v ohni istoriï :"],"1920":["Inhuman blockade strangling a nation :","Pro Sichovykh Strilʹt︠s︡iv /"],"1940":["Prychynky do istoriï ukraïnsʹkoï revoli︠u︡tsiï."],"1950":["Za velych natsiï /","Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :","Vyzvolʹna borotʹba na zakhidnʹo-ukraïnsʹkykh zemli︠a︡kh u 1918-1923 rokakh /"],"1960":["Pry dz︠h︡erelakh borotʹby :","Vyhnaty okupanta /"],"1970":["Pisni︠a︡ pro chervonu kalynu, 1914-1974.","Nestor Makhno :","Z viĭsʹkovoho hnizda :","U 50-richchi︠a︡ Zymovoho pokhodu armiï UNR ="],"1930":["I︠U︡vileĭna pami︠a︡tka, 1887-1937 :"],"2010":["Otaman Orlyk /","Proekt \"Ukraïna\", abo Krakh Symona Petli︠u︡ry /","Ukraïnsʹka amazonka Oleksandra Sokolovsʹka (otamansha \"Marusi︠a︡\") /","Die Ukraine :"]},"wwii":{"1990":["1939 :","--Za voli︠u︡ Ukraïny :","Ukraïna v Druhiĭ svitoviĭ i Velykiĭ Vitchyzni︠a︡niĭ viĭnakh, 1939-1945 rr. /","Krymskie repatrianty :"],"1950":["Akt vidnovlenni︠a︡ ukraïnsʹkoï derz︠h︡avnosty 30. chervni︠a︡ 1941 roku :","Orhanizat︠s︡ii︠a︡ ukraïnsʹkykh nat︠s︡ionalistiv pidchas Druhoï Svitovoï viĭny /","Spomyny chotovoho Ostroverkha : khronika Taktychnykh vidtynkiv UPA \"Lemko\" i \"Makivka\", 1944-1948.","Krizʹ smikh zaliza :"],"1960":["Ukrainian nationalism.","U nastupakh i vidstupakh :","Rozkaz︠h︡u vam pro Kazakhstan :"],"1980":["Ukrainian nationalism /","Truth and myths about UPA /","Armii︠a︡ bez derz︠h︡avy :","Odyn rik u Chervoniĭ Armiï :"],"2000":["Promizhnyĭ zvit robochoĭ hrupy dli︠a︡ pidhotovky istorychnoho vysnovku pro dii︠a︡lʹnistʹ OUN-UPA :","Polacy we Lwowie, 1939-1944 :","OUN-UPA i ukraïnsʹke pytanni︠a︡ v roky Druhoï svitovoï viĭny :","Pidpilli︠a︡ OUN(b) u Donbasi /"],"2010":["Il tridente e la svastica :","Kolyska rodynna /","Trahedii︠a︡ ukraïnsʹko-polʹsʹkoho protystoi︠a︡nni︠a︡ na Volyni 1938-1944 rokiv :","Teorii︠a︡ i praktika zapadnoukrainskogo nat︠s︡ionalizma v dokumentakh NKVD, MVD i MGB SSSR, 1939-1956 :"]},"famine":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Mezhdunarodnai︠a︡ komissii︠a︡ po rassledovanii︠u︡ goloda na Ukraine 1932-1933 godov :","Investigation of the Ukrainian famine, 1932-1933 :","Lettere da Kharkov :"],"2000":["Henot︠s︡yd :","Strashna pravda holodomoru :","Holodomory v Ukraïni 1921-1923, 1932-1933, 1946-1947 :","Holodovka, 1932-1933 roky na Perei︠a︡slavshchyni :"],"1950":["The Golgotha of Ukraine :","Naĭbilʹshyĭ zlochyn Kremli︠a︡ :","V dev'i︠a︡tim kruzi-- /","The ninth circle /"],"1960":["Moskva slʹozam ne virytʹ :","Organized famine in Ukraine, 1932-1933 /","Stalinsʹko-khrushchovsʹke okhvisti︠a︡ /","Orhanizovanyĭ holod v Ukraïni 1932-1933 /"],"1920":["Hunger in der Ukraine /","Holod na Ukraïni :"],"1930":["Lykholitti︠a︡ Ukraïny /","Famine in Ukraine."],"1970":["Memorandum from the World Congress of Free Ukrainians to the General Secretary of United Nations, Hon. Dr Kurt Waldheim.","Ukraïnsʹkyĭ \"Holokost\", 1933 /"],"1980":["The ninth circle :","Holod na Ukraïni i \"tai︠e︡mnycha ruka\" /","The agony of a nation :","50 years ago :"],"2010":["Holodomor, famine in Ukraine, 1932-1933","Uprazhnenii︠a︡ s istorieĭ po-ukrainski /","Golodomor /","Holodomor bibliography :"]},"foreign_relations":{"2000":["Ukraine and Russia :","Ukraïna ĭ Italii︠a︡ u naukovykh, osvitnikh ta literaturnykh vzai︠e︡mynakh :","Napływ szlachty polskiej na Ukrainę, 1569-1648 /","Ukraïnsʹko-nimet︠s︡ʹke spivrobitnyt︠s︡tvo u konteksti i︠e︡vropeĭsʹkoï intehrat︠s︡iï :"],"1990":["Rosja w polityce niepodległej Ukrainy /","Z istoriï mizhnarodnykh zv'i︠a︡zkiv Ukraïny :","Die Ukrainische Freie Universität und ihre Rolle in der Auseinandersetzung um die Russifizierung der Ukraine in der Sowjetunion /","Russia and Ukraine :"],"1950":["Moscow and the Ukraine, 1918-1953;"],"1940":["Seredzemne more i Ukraïna /"],"1960":["Fifty years of fraud and oppression;","Proiskhozhdenie ukrainskogo separatizma /"],"1970":["Istoricheskie korni druzhby i edinenii︠a︡ ukrainskogo i belorusskogo narodov /","Odessza és a magyarok /","Rozdumy nad odnii︠e︡i︠u︡ knyz︠h︡koi︠u︡ :"],"1980":["Ukraine and Poland in documents, 1918-1922 /","Dz︠h︡erela pro rosiĭsʹko-ukraïnsʹki politychni zvʹi︠a︡zky v roky vyzvolʹnoï viĭny ukraïnsʹkoho narodu, 1648-1654 /","Naĭmant︠s︡i fashyzmu :","Druzhba i bratstvo russkogo i ukrainskogo narodov /"],"1910":["Ukraïnsʹka derz︠h︡avna dumka i Evropa /"],"2010":["Ukraïna v zoni turbulentnosti :","Gorzhusʹ, chto i︠a︡--ukrainet︠s︡ /","Rozvytok humanitarnoho spivrobitnyt︠s︡tva v ukraïnsʹko-slovat︠s︡ʹkomu prykordonnomu rehioni :","Trahedii︠a︡ ukraïnsʹko-polʹsʹkoho protystoi︠a︡nni︠a︡ na Volyni 1938-1944 rokiv :"]},"politics":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Miz︠h︡ vichnymy poli︠u︡samy /","Russia and Ukraine :","--\"I︠A︡ povstai︠u︡, otz︠h︡e, i︠a︡ isnui︠u︡ ...\" :"],"2000":["\"Ukrainskiĭ vopros\" v politike vlasteĭ i russkom obshchestvennom mnenii (vtorai︠a︡ polovina XIX v.) /","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;","Pulʹs ukraïnsʹkoï nezalez︠h︡nosti :","Ukuraina no gendai seiji /"],"1960":["Russian oppression in Ukraine;","Pry dz︠h︡erelakh borotʹby :","Heĭ, tam na hori \"Sich\" ide! :","Vybrani pratsi."],"1910":["Vilʹna Ukraïna.","L'Ukraine depuis l'armistice /"],"1940":["Seredzemne more i Ukraïna /","Samostiĭna Ukraïna /","Ukraïna i Krym v istorychnykh vzai︠e︡mynakh /"],"1970":["Ferment in the Ukraine;","Lysty Dmytra Doroshenka do Vi︠a︡cheslava Lypynsʹkoho.","Vybrani statti i promovy.","Materii︠a︡ly kongresu."],"1980":["Ukrainian nationalism /","Pohrom v Ukraïni, 1972-1979 /","I︠A︡ka orii︠e︡ntat︠s︡ii︠a︡? /","Ukraine and Poland in documents, 1918-1922 /"],"1930":["Le calvaire d'un peuple :","Za diĭsne vyi︠a︡snenni︠a︡ poloz︠h︡enni︠a︡ na Radi︠a︡nsʹkiĭ Ukraïni! /","Di raṭn in ḳamf far der generaler parṭaylinye /"],"1950":["In quest of freedom, 1918-1958 :","Za chystotu pozyt︠s︡iĭ ukraïnsʹkoho vyzvolʹnoho rukhu /","Pid znakom tryvoz︠h︡noho maĭbutnʹoho :","Moskovsʹka otruta /"],"1920":["Otchet raboche-krestʹi︠a︡nskogo pravitelʹstva Ukrainy IV-mu Vseukrainskomu S'ezdu [sic] Sovetov Rabochikh, Krestʹi︠a︡nskikh i Krasnoarmeĭskikh Deputatov :"],"2010":["Proekt \"Ukraïna\", abo Tai︠e︡mnyt︠s︡i︠a︡ Mykhaĭla Hrushevsʹkoho /","Ukraïna v zoni turbulentnosti :","Poslanni︠a︡ Prezydenta Ukraïny Viktora I︠A︡nukovycha do Ukraïnsʹkoho narodu z ekspertnoi︠u︡ dopoviddi︠u︡ NISD \"Ukraïna XXI stolitti︠a︡--stratehii︠a︡ reform i suspilʹnoï konsolidat︠s︡iï\" /","100 dniv novoï vlady--i︠a︡ka modelʹ uri︠a︡duvanni︠a︡ formui︠e︡tʹsi︠a︡? /"],"1860":["Tarih-i Kaminçe."]},"antiquities":{"2000":["Les sites archéologiques en Crimée et au Caucase durant l'antiquité tardive et le haut Moyen-Age /","Ot i︠a︡zychestva k khristianstvu :","Hreky na ukraïnsʹkykh terenakh :","IV Dmitrievskie chtenii︠a︡ :"],"1990":["T︠S︡ʹoho vy ne znai︠e︡te! :","Unbekannte Krim :","Archaeological map of Nymphaion (Crimea) /","Ėtnicheskai︠a︡ istorii︠a︡ rannevizantiĭskogo Kryma /"],"1940":["Staryĭ Halych :"],"1910":["Ostrov Bi︠e︡lyĭ i Tavrika na Evksinskom Ponti︠e︡ /","Z pradziejów ziemi lwowskiej /"],"1960":["Kanivsʹke poselenni︠a︡ poli︠a︡n /","Skify Dneprovskogo lesostepnogo Levoberezhʹi︠a︡ :","Doklady, prochitannye na XI Vsesoi︠u︡znoĭ studencheskoĭ arkheologicheskoĭ konferent︠s︡ii 1965 g. v Erevane."],"1720":["Kurgany poli︠a︡n X-XII vv. /","I︠A︡mnai︠a︡ kulʹturno-istoricheskai︠a︡ oblastʹ (i︠u︡zhnobugskiĭ variant) /","Kizil-kobinskai︠a︡ kulʹtura i tavry /","Pozdnie skify v Krymu /"],"1970":["Proshloe Kaneva i ego okrestnosteĭ /","Mynule Kaneva ta ĭoho okolyt︠s︡ʹ /","Ranneskifskie kurgany basseĭna r. Ti︠a︡smin :","Ukraïna na dosvitku istorii."],"1980":["Drevnerusskoe Podnestrovʹe :","Bosporskie goroda :","Lepnai︠a︡ keramika bosporskikh gorodov /","Koroplastika Bospora :"],"1900":["Si︠e︡veri︠a︡nskai︠a︡ zemli︠a︡ i si︠e︡veri︠a︡ne po gorodishcham i mogilam /"],"1890":["Résidences impériales et villes mortes de Crimée /"],"1830":["O drevnosti︠a︡kh i︠u︡zhnago berega Kryma i gor Tavricheskikh /"],"1950":["Pam'i︠a︡tnyk svi︠a︡tomu kni︠a︡zi︠u︡ Volodymyru v Kyi︠e︡vi /"],"2010":["The glory of Ukraine :","Ukraïnsʹki svi︠a︡tyni ta symvoly /","Tavry :","Ukraine from Trypillia to Rus /"],"1860":["Putevyi︠a︡ zami︠e︡tki :"]},"other":{"2000":["From America with love :","Fond 252, Odessa Office for Foreign Settlers in Southern Russia (1806, 1807, 1814-1834, 1843, 1850) :","Napływ szlachty polskiej na Ukrainę, 1569-1648 /","Krymchaki :"],"1990":["Istoricheskiĭ opyt mezhnat︠s︡ionalʹnogo i mezhkonfessionalʹnogo soglasii︠a︡ v Krymu /","Ukraïnsʹka presa :","Suspilʹno-politychnyĭ rukh 30-60-kh rokiv XIX stolitti︠a︡ v Ukraïni ta ĭoho vysvitlenni︠a︡ na storinkakh ukraïnsʹkoï presy /","Stepan Lenkavsʹkyĭ :"],"1980":["Mälestused Krimmist /","Pohrom v Ukraïni, 1972-1979 /","Vi︠a︡cheslav Lypynsʹkyĭ--tvory /","Narys rannʹoï istoriï Rusy-Ukraïny /"],"1940":["UPA in Western Europe.","Chuz︠h︡ynt︠s︡i pro Ukraïnu.","Seredzemne more i Ukraïna /","Samostiĭna Ukraïna /"],"1910":["Ostrov Bi︠e︡lyĭ i Tavrika na Evksinskom Ponti︠e︡ /","Kīevskai︠a︡ Rusʹ","Istoryi︠a︡ Ukraïny v zhyti︠e︡pysi︠a︡kh vyznachniĭshykh i︠e︡ï dïi︠a︡chiv","L'Ukraine depuis l'armistice /"],"1920":["Inhuman blockade strangling a nation :","Pry bytiĭ dorozi :","Zi spomyniv Myroslava Sichynsʹkoho /","Zbirnyk materii︠a︡liv Odesʹkoï krai︠e︡voï komisiï dli︠a︡ okhorony pam'i︠a︡tok materii︠a︡lʹnoï kulʹtury ta pryrody."],"1930":["Perepysni knyhy 1666 roku /","Sprawozdanie Ukraińskiego Instytutu Naukowego,","Le calvaire d'un peuple :","Pid sont︠s︡em Podilli︠a︡ :"],"1950":["Statti, lysty, dokumenty /","The Golgotha of Ukraine :","Poriddi︠a︡ Iudy;","Naĭbilʹshyĭ zlochyn Kremli︠a︡ :"],"1960":["Pry dz︠h︡erelakh borotʹby :","Zaselenni︠a︡ Pivdennoï Ukraïny /","Kanivsʹke poselenni︠a︡ poli︠a︡n /","Pivdennyĭ bereh Krymu ="],"1970":["Ferment in the Ukraine;","Kyiv versus Moscow;","On the eve of Poltava :","Pisni︠a︡ pro chervonu kalynu, 1914-1974."],"1720":["Kurgany poli︠a︡n X-XII vv. /","I︠A︡mnai︠a︡ kulʹturno-istoricheskai︠a︡ oblastʹ (i︠u︡zhnobugskiĭ variant) /"],"1900":["Iz ukraĭnskoĭ stariny /","Si︠e︡veri︠a︡nskai︠a︡ zemli︠a︡ i si︠e︡veri︠a︡ne po gorodishcham i mogilam /","Chernigovskīe malorossy :"],"1890":["Rozvidky pro narodnï rukhy na Ukraïnï-Rusy v XVIII vit︠s︡ï.","Résidences impériales et villes mortes de Crimée /"],"1830":["O drevnosti︠a︡kh i︠u︡zhnago berega Kryma i gor Tavricheskikh /"],"1880":["Bunt skvirskago magistrata /"],"2010":["Krimmi päevik :","Proekt \"Ukraïna\", abo Tai︠e︡mnyt︠s︡i︠a︡ Mykhaĭla Hrushevsʹkoho /","The glory of Ukraine :","Ukraïnsʹki svi︠a︡tyni ta symvoly /"],"1860":["Putevyi︠a︡ zami︠e︡tki :"]}},"themeTotals":{"antiquities":564,"foreign_relations":551,"other":3105,"ethnic_groups":237,"ethnic_relations":156,"people":974,"intellectual_cultural":398,"nationalism":665,"oun_upa":333,"revolution":234,"politics":1010,"social_economic":153,"famine":280,"description_travel":239,"historiography":368,"political_persecution":311,"wwii":227,"local_military_history":292,"euromaidan":56},"themeTotalsWithYear":{"antiquities":554,"foreign_relations":510,"other":2891,"ethnic_groups":224,"ethnic_relations":155,"people":884,"intellectual_cultural":375,"nationalism":584,"oun_upa":262,"revolution":213,"politics":915,"social_economic":144,"famine":276,"description_travel":219,"historiography":346,"political_persecution":302,"wwii":192,"local_military_history":275,"euromaidan":56},"totalRecords":7093,"matchedAnyCount":5535,"noPubYCount":477};
 
 const yrMin = DATA.yearMin, yrMax = DATA.yearMax;
 const bands = DATA.bandOrder; // fixed stacking order == the CVD-validated adjacency order
 
-document.getElementById('totalRecordsNum').textContent = DATA.totalRecords.toLocaleString();
+// Eight bands (7 grouped topics + the "Other topics" catch-all) have no
+// solid hex -- DATA.bandColor[b] is null and DATA.bandTexture[b] holds a
+// {type, angle?, spacing, weight?, tone} spec instead. This project's own
+// dark categorical palette tops out at 11 hues that pass its colorblind-
+// separation validator on this page's dark surface (#0b0d10); rather than
+// force unsafe new hues for an 18th/19th/etc. band, every textured band
+// shares ONE muted tone and is told apart from its texture SIBLINGS by
+// pattern alone (angle, spacing, or dot/cross vs. lines) -- exact
+// identification always comes from the legend, the hover tooltip, or (for
+// the bigger ones) the direct right-edge label, never texture alone.
+function isTextured(b) { return !!DATA.bandTexture[b]; }
+function bandFill(b) { return isTextured(b) ? 'url(#pat_' + b + ')' : DATA.bandColor[b]; }
+function bandSolid(b) { return isTextured(b) ? DATA.bandTexture[b].tone : DATA.bandColor[b]; }
+
+// CSS-only equivalent of the SVG <pattern> below, for the HTML legend and
+// tooltip swatches (which can't reference an SVG pattern URL directly).
+function swatchStyle(b) {
+  const t = DATA.bandTexture[b];
+  if (!t) return 'background:' + DATA.bandColor[b] + ';';
+  const w = t.weight || 1.4;
+  if (t.type === 'dots') {
+    return 'background-color:#20242c;border:1px solid ' + t.tone + ';' +
+      'background-image:radial-gradient(circle,' + t.tone + ' 1px,transparent 1.3px);' +
+      'background-size:' + (t.spacing * 0.62) + 'px ' + (t.spacing * 0.62) + 'px;';
+  }
+  if (t.type === 'cross') {
+    return 'background-color:#20242c;border:1px solid ' + t.tone + ';background-image:' +
+      'repeating-linear-gradient(45deg,' + t.tone + ' 0 ' + w + 'px,transparent ' + w + 'px ' + t.spacing + 'px),' +
+      'repeating-linear-gradient(135deg,' + t.tone + ' 0 ' + w + 'px,transparent ' + w + 'px ' + t.spacing + 'px);';
+  }
+  return 'background-color:#20242c;border:1px solid ' + t.tone + ';background-image:' +
+    'repeating-linear-gradient(' + t.angle + 'deg,' + t.tone + ' 0 ' + w + 'px,transparent ' + w + 'px ' + t.spacing + 'px);';
+}
+
+document.getElementById('totalRecordsNum').textContent =
+  DATA.matchedAnyCount.toLocaleString() + ' of ' + DATA.totalRecords.toLocaleString();
 document.getElementById('smoothWindowNum').textContent = DATA.smoothWindow;
 document.getElementById('footerNote').innerHTML =
   'Built from the same DK508 bibliographic dataset as the companion map and geographic river. ' +
-  'Theme totals (all years, incl. ' + DATA.noPubYCount + ' records with no usable publication year, not shown on the chart): ' +
+  'Band totals (all years, incl. ' + DATA.noPubYCount + ' records with no usable publication year, not shown on the chart): ' +
   bands.map(b => DATA.bandLabel[b] + ' ' + DATA.themeTotals[b]).join(', ') + '.';
 
-// --- legend ---------------------------------------------------------------
+// --- legend, clickable to focus a single topic -----------------------------
+// Clicking a legend item isolates that band's own dynamics (thickness over
+// time IS its record count, independent of the wiggle offset's vertical
+// placement) by dimming every other band -- rather than re-laying-out the
+// stack, which would need a completely different (non-streamgraph) chart
+// per topic. Click the same item again, or "Show all topics", to clear it.
+let focusedBand = null;
 const legendEl = document.getElementById('legend');
 legendEl.innerHTML = bands.map(b =>
-  '<div class="legend-item"><span class="legend-swatch" style="background:' + DATA.bandColor[b] + '"></span>' +
+  '<div class="legend-item" data-band="' + b + '" tabindex="0" role="button" ' +
+  'aria-pressed="false" title="Click to focus on ' + escapeHtml(DATA.bandLabel[b]) + ' alone">' +
+  '<span class="legend-swatch' + (isTextured(b) ? ' other' : '') + '" style="' + swatchStyle(b) + '"></span>' +
   DATA.bandLabel[b] + '</div>'
 ).join('');
+
+function setFocus(b) {
+  focusedBand = (focusedBand === b) ? null : b;
+  applyFocusUI();
+  render();
+  if (document.getElementById('tableView').style.display !== 'none') buildTable();
+}
+legendEl.querySelectorAll('.legend-item').forEach(el => {
+  el.addEventListener('click', () => setFocus(el.dataset.band));
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFocus(el.dataset.band); }
+  });
+});
+document.getElementById('focusHintClear').addEventListener('click', () => setFocus(focusedBand));
+
+function applyFocusUI() {
+  legendEl.classList.toggle('has-focus', !!focusedBand);
+  legendEl.querySelectorAll('.legend-item').forEach(el => {
+    const on = el.dataset.band === focusedBand;
+    el.classList.toggle('is-focused', on);
+    el.setAttribute('aria-pressed', String(on));
+  });
+  const hint = document.getElementById('focusHint');
+  if (focusedBand) {
+    hint.classList.add('show');
+    document.getElementById('focusHintSwatch').setAttribute('style', swatchStyle(focusedBand));
+    const total = DATA.themeTotals[focusedBand] || 0;
+    document.getElementById('focusHintText').textContent =
+      'Focused on ' + DATA.bandLabel[focusedBand] + ' (' + total.toLocaleString() + ' records, all years) — other topics dimmed.';
+  } else {
+    hint.classList.remove('show');
+  }
+}
 
 // --- smoothing: centered moving average, edge-clamped (shorter window at
 // the very start/end of the range rather than padding with zeros, so the
@@ -257,6 +397,39 @@ function render() {
 
   const innerW = width - margin.left - margin.right;
   const innerH = height - margin.top - margin.bottom;
+
+  // Texture fills for every band whose DATA.bandTexture entry is non-null
+  // (the dataviz skill's documented accessibility channel for "too many
+  // series for safe new hues"): a faint backing tint (so a band reads as
+  // filled, not empty) plus a type-specific pattern (diagonal lines at the
+  // band's own angle, a dot grid, or a 45°/135° cross-hatch), always in
+  // the ONE shared muted tone -- pattern, not hue, is what tells these
+  // bands apart from each other.
+  const defs = svg.append('defs');
+  bands.forEach(b => {
+    const t = DATA.bandTexture[b];
+    if (!t) return;
+    const pat = defs.append('pattern')
+      .attr('id', 'pat_' + b).attr('patternUnits', 'userSpaceOnUse')
+      .attr('width', t.spacing).attr('height', t.spacing);
+    pat.append('rect').attr('width', t.spacing).attr('height', t.spacing).attr('fill', '#232830');
+    if (t.type === 'dots') {
+      pat.append('circle')
+        .attr('cx', t.spacing / 2).attr('cy', t.spacing / 2).attr('r', 1.15)
+        .attr('fill', t.tone).attr('fill-opacity', 0.9);
+    } else if (t.type === 'cross') {
+      [45, 135].forEach(a => {
+        pat.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', t.spacing)
+          .attr('transform', 'rotate(' + a + ' ' + (t.spacing / 2) + ' ' + (t.spacing / 2) + ')')
+          .attr('stroke', t.tone).attr('stroke-width', 1.2).attr('stroke-opacity', 0.85);
+      });
+    } else { // lines
+      pat.attr('patternTransform', 'rotate(' + t.angle + ')');
+      pat.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', t.spacing)
+        .attr('stroke', t.tone).attr('stroke-width', t.weight || 1.6).attr('stroke-opacity', 0.85);
+    }
+  });
+
   const g = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
   // Minimal custom "scale" (plain function with the members d3-axis needs)
@@ -311,11 +484,21 @@ function render() {
     .y1(d => y(d[1]))
     .curve(d3.curveBasis);
 
+  // When a legend click has focused one band, every other band dims to a
+  // faint background level -- the focused band's own thickness (its true
+  // record count at that x) is unaffected, so this reads its dynamics
+  // cleanly without redrawing the chart as a different (non-stream) type.
+  const DIM_OPACITY = 0.10;
   const areasG = g.append('g');
   areasG.selectAll('path').data(stacked).join('path')
     .attr('class', 'area-band')
-    .attr('fill', d => DATA.bandColor[d.key])
-    .attr('fill-opacity', 0.88)
+    .attr('fill', d => bandFill(d.key))
+    .attr('fill-opacity', d => {
+      if (focusedBand && d.key !== focusedBand) return DIM_OPACITY;
+      return isTextured(d.key) ? 1 : 0.88;
+    })
+    .attr('stroke', d => (focusedBand && d.key === focusedBand) ? 'var(--text-primary)' : 'var(--surface-1)')
+    .attr('stroke-width', d => (focusedBand && d.key === focusedBand) ? 1.75 : 1.25)
     .attr('d', area);
 
   // dotted "pre-data" lead-in: a thin dashed zero-line from the axis start
@@ -339,15 +522,28 @@ function render() {
       .attr('y1', zeroY).attr('y2', zeroY);
   }
 
-  // direct labels at the right edge, one per band, vertically centered on
-  // that series' own position at the last year -- nudged apart on
-  // collision (thin bands can end close together).
+  // direct labels at the right edge -- with 19 bands, labeling all of them
+  // would be unreadable, so only the DIRECT_LABEL_COUNT thickest bands (at
+  // the very last year) get one; every band is still identified precisely
+  // via the legend (always shown, all 19) and the hover tooltip (always
+  // shown, all 19) -- this matches the dataviz skill's own rule that a
+  // legend covers identity for series beyond what can be direct-labeled.
   const labelG = g.append('g');
-  const labelPositions = bands.map(b => {
+  const DIRECT_LABEL_COUNT = 11;
+  const allLabelCandidates = bands.map(b => {
     const s = stackedByKey[b];
     const last = s[s.length - 1];
-    return { b, midY: (y(last[0]) + y(last[1])) / 2 };
+    return { b, midY: (y(last[0]) + y(last[1])) / 2, thickness: Math.abs(last[1] - last[0]) };
   });
+  let labelPositions = allLabelCandidates.slice()
+    .sort((a, c) => c.thickness - a.thickness)
+    .slice(0, DIRECT_LABEL_COUNT);
+  // A focused band always gets its own label, even if it's too thin to
+  // otherwise make the top-N cut -- the whole point of focusing on it is
+  // to read its own line, so it shouldn't lose its name off the edge.
+  if (focusedBand && !labelPositions.some(l => l.b === focusedBand)) {
+    labelPositions.push(allLabelCandidates.find(l => l.b === focusedBand));
+  }
   labelPositions.sort((a, c) => a.midY - c.midY);
   const MIN_LABEL_GAP = 14;
   for (let i = 1; i < labelPositions.length; i++) {
@@ -362,6 +558,17 @@ function render() {
     nationalism: 'Nationalism & indep.',
     wwii: 'World War II',
     revolution: 'Revolution & Civil War',
+    oun_upa: 'OUN & UPA',
+    political_persecution: 'Political persecution',
+    euromaidan: 'Euromaidan, 2013–14',
+    foreign_relations: 'Foreign relations',
+    historiography: 'Historiography',
+    intellectual_cultural: 'Intellectual & cultural',
+    local_military_history: 'Local & military hist.',
+    description_travel: 'Description & travel',
+    ethnic_groups: 'Ethnic groups',
+    social_economic: 'Social & economic',
+    other: 'Other topics',
   };
   labelPositions.forEach(({ b, midY }) => {
     labelG.append('text')
@@ -369,14 +576,19 @@ function render() {
       .attr('x', innerW + 8)
       .attr('y', midY)
       .attr('dy', '0.32em')
-      .attr('fill', DATA.bandColor[b])
+      .attr('fill', bandSolid(b))
+      .attr('opacity', (focusedBand && b !== focusedBand) ? 0.35 : 1)
+      .attr('font-weight', (focusedBand && b === focusedBand) ? 800 : 700)
       .text(SHORT_LABEL[b] || DATA.bandLabel[b]);
   });
 
   // --- hover crosshair + tooltip -------------------------------------------
   const crosshair = g.append('line').attr('class', 'crosshair').attr('y1', 0).attr('y2', innerH);
   const hoverDots = g.append('g').selectAll('circle').data(bands).join('circle')
-    .attr('class', 'hover-dot').attr('r', 4).attr('fill', d => DATA.bandColor[d]);
+    .attr('class', 'hover-dot')
+    .attr('r', d => (focusedBand && d === focusedBand) ? 5 : 4)
+    .attr('fill', d => bandSolid(d))
+    .attr('fill-opacity', d => (focusedBand && d !== focusedBand) ? DIM_OPACITY * 2.5 : 1);
 
   const overlay = g.append('rect')
     .attr('width', innerW).attr('height', innerH)
@@ -403,18 +615,19 @@ function render() {
     let html = '<div class="year">' + yr + '</div>';
     bands.forEach(b => {
       const raw = DATA.series[b][idx];
-      html += '<div class="row"><span class="swatch" style="background:' + DATA.bandColor[b] + '"></span>' +
+      const dim = focusedBand && b !== focusedBand;
+      html += '<div class="row"' + (dim ? ' style="opacity:0.4"' : '') + '><span class="swatch' + (isTextured(b) ? ' other' : '') + '" style="' + swatchStyle(b) + '"></span>' +
         DATA.bandLabel[b] + ': <b style="margin-left:auto">' + raw + '</b></div>';
     });
     const titleBlocks = [];
     bands.forEach(b => {
       const titles = (DATA.decadeTitles[b] && DATA.decadeTitles[b][decadeKey]) || [];
-      if (titles.length) titleBlocks.push({ label: DATA.bandLabel[b], color: DATA.bandColor[b], title: titles[0] });
+      if (titles.length) titleBlocks.push({ label: DATA.bandLabel[b], key: b, title: titles[0] });
     });
     if (titleBlocks.length) {
       html += '<div class="titles-head">Example titles, ' + decadeKey + 's:</div>';
       titleBlocks.forEach(tb => {
-        html += '<div class="title-row"><span class="swatch" style="background:' + tb.color + '"></span>' +
+        html += '<div class="title-row"><span class="swatch' + (isTextured(tb.key) ? ' other' : '') + '" style="' + swatchStyle(tb.key) + '"></span>' +
           '<span><b>' + tb.label + ':</b> &ldquo;' + escapeHtml(tb.title) + '&rdquo;</span></div>';
       });
     }
@@ -447,8 +660,16 @@ window.addEventListener('resize', () => {
 
 // --- table view (accessibility fallback) ------------------------------------
 function buildTable() {
+  // Mirror the chart's legend focus here too: the focused band's column
+  // stays highlighted, everything else dims, so switching to the table
+  // view doesn't lose the focus context set on the chart.
   document.getElementById('tableHead').innerHTML =
-    '<th>Decade</th>' + bands.map(b => '<th>' + DATA.bandLabel[b] + '</th>').join('');
+    '<th>Decade</th>' + bands.map(b => {
+      const on = b === focusedBand;
+      const dim = focusedBand && !on;
+      const style = on ? 'color:' + bandSolid(b) + ';opacity:1' : dim ? 'opacity:0.4' : '';
+      return '<th style="' + style + '">' + DATA.bandLabel[b] + '</th>';
+    }).join('');
   const byDecade = new Map();
   years.forEach((yr, i) => {
     const dk = Math.floor(yr / 10) * 10;
@@ -457,7 +678,10 @@ function buildTable() {
     bands.forEach(b => { acc[b] += DATA.series[b][i]; });
   });
   const rowsHtml = Array.from(byDecade.entries()).map(([dk, acc]) =>
-    '<tr><td>' + dk + 's</td>' + bands.map(b => '<td>' + acc[b] + '</td>').join('') + '</tr>'
+    '<tr><td>' + dk + 's</td>' + bands.map(b => {
+      const dim = focusedBand && b !== focusedBand;
+      return '<td' + (dim ? ' style="opacity:0.4"' : (b === focusedBand ? ' style="font-weight:700"' : '')) + '>' + acc[b] + '</td>';
+    }).join('') + '</tr>'
   ).join('');
   document.getElementById('tableBody').innerHTML = rowsHtml;
 }
