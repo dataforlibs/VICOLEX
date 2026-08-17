@@ -160,6 +160,7 @@
     <a href="#network">Relationships</a>
     <a href="#language">Language</a>
     <a href="#timeline">Timeline</a>
+    <a href="#understanding">Why it helps</a>
     <a href="#honesty">Methodology</a>
   </nav>
   <div class="tools">
@@ -171,7 +172,7 @@
 <main>
 
   <section id="hero">
-    <h1>What a library catalog can tell you about <em>Ukraine's</em> history — and everyone else's part in it</h1>
+    <h1>What a library catalog can tell you about <em>Ukraine's</em> local history — and everyone else's part in it</h1>
     <p class="lede">Two interactive visualizations built from the Library of Congress's DK508 classification —
       "Ukraine — History." Not a textbook, and not a claim about who owns what: a way to see the patterns
       already sitting inside 7,093 catalog records, and to click through to the actual books behind every
@@ -389,6 +390,71 @@
     <p>The Influence River chart plots exactly this: Ukraine's own subject-heading throughline against how
       often Russia, Poland, and other neighboring powers appear in the same bibliography, year by year, from
       650 BC to the present — with these same turning points marked directly on the chart.</p>
+  </section>
+
+  <section id="understanding">
+    <h2><span class="kicker">What this adds to historical understanding</span>Three things this view does that reading the catalog record-by-record can't</h2>
+    <p class="lede">This isn't a substitute for reading the books, and it doesn't settle historical arguments on
+      its own. What it's good for is noticing things a straightforward read of 7,093 individual records would
+      never surface, and turning them into questions worth chasing into the actual titles.</p>
+
+    <h3>Emphasis becomes visible</h3>
+    <p>A single catalog record can't tell you whether it's typical or an outlier for its period — only the
+      shape of many records together can. On the Influence River, Poland's mention-years step from the
+      mid-teens to 33 right at 1918, and Russia's step from 14 to 25 at 1917 — precisely the Ukrainian–Polish
+      War and the Russian Revolution. No reader browsing headings one at a time would notice that step; seen
+      as a shape, it's immediate. That's a claim about how this history has been catalogued and written
+      about, not a verdict on what happened — but it's real evidence of emphasis, and exactly the kind of
+      thing worth opening the actual records behind it to understand further.</p>
+
+    <h3>Documentation has its own timeline, separate from events</h3>
+    <p>The Map &amp; Network Explorer keeps two timelines deliberately separate: what a record is <i>about</i>
+      versus <i>when it was published</i>. A retrospective history written decades after the events it covers
+      looks identical to a contemporaneous account if you only track one date — conflate the two and you lose
+      the ability to ask "when did people start writing about this," which is its own historical question,
+      distinct from "when did this happen." Splitting them turns the catalog into a rough instrument for
+      watching scholarly and public attention shift over time, not just the events themselves.</p>
+
+    <h3>Silence isn't proof of absence</h3>
+    <p>The Influence River goes completely flat for Russia, Poland, and every other outside power before
+      1501, and the "Other powers" band goes quiet twice more, in 1743–1799 and 1801–1866. It would be easy to
+      read a flat line as "nothing happened here" — this view deliberately doesn't let that reading go
+      unchallenged. A gap might mean the catalog genuinely holds nothing describing that period, or it might
+      mean cataloguing practice at the time simply didn't apply this kind of dated heading as often, regardless
+      of what was actually going on historically. The tool can't tell those two apart for you, and doesn't try
+      to — surfacing the question at all is a more careful way to read an archive than assuming its coverage
+      is even. The Map Explorer's structural bridges do something similar for geography: a place like the
+      Soviet Union or Poland scoring high on betweenness is, in a rough sense, a fingerprint of exactly how
+      entangled Ukraine's administrative and documented history has been with its neighbors.</p>
+
+    <h3>Why this beats reading headings or call numbers directly</h3>
+    <p>Nothing in these tools is information a subject heading or an LCC call number doesn't already contain
+      — every mention-year, every network edge, every place on the map traces back to text a cataloger
+      actually wrote. What changes is what becomes possible to <i>see</i> at the scale of 7,093 records, not
+      one.</p>
+    <p>A call number puts a book in exactly one place. A number like <code>DK508.833 .L976</code> encodes this
+      collection's own internal topic/region hierarchy and sorts a book to one fixed shelf position within
+      it — useful for browsing physically-adjacent books, but a book only lives at that one spot. The same
+      record can be about a place, a time period, <i>and</i> a relationship to another power all at once, and
+      a shelf position can't hold three dimensions simultaneously the way a filterable map, timeline, and
+      network graph can — the map/river/network views just let the same 7,093 records get grouped by
+      whichever of those axes is the interesting one right now, instead of the one axis a call number commits
+      to permanently.</p>
+    <p>A subject heading, read one record at a time in a catalog search, is a list — and a list doesn't add.
+      Noticing that Poland's headings step from 14–15 to 33 right at 1918 means literally tallying hundreds of
+      individual date-subdivided headings by year; no one does that by eye across thousands of records, so
+      that pattern is functionally invisible to a person paging through search results, even though every
+      single heading behind it was sitting right there in the catalog the whole time. The chart isn't adding
+      information the headings lack — it's doing the arithmetic a human browsing them realistically can't,
+      and showing the result as a shape instead of a spreadsheet.</p>
+    <p>Cross-record relationships fare even worse under plain browsing: two records that share "Kharkiv" and
+      "Poland" as subjects don't visibly connect to each other anywhere in a catalog interface. You'd have to
+      search each heading separately and manually cross-reference hundreds of result lists to notice they
+      cluster — which is exactly the arithmetic the network graph performs for the whole collection at once,
+      turning an invisible pattern spread across thousands of separate search results into a handful of
+      communities and bridge nodes you can see and click through in seconds.</p>
+    <p class="muted">All of this reads the catalog's own cataloguing choices, not history directly — see
+      <a href="#honesty">Being honest about the data</a> for what that proxy can and can't support.</p>
   </section>
 
   <section id="explore">
