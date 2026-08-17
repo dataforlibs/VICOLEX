@@ -256,6 +256,11 @@
     padding: 6px 10px; cursor: pointer; font-size: 12px; flex: none;
   }
   #kwSearchBtn:hover { background: #37424f; }
+  #kwClearBtn {
+    background: #241a22; color: #e8b8dc; border: 1px solid #4a2e42; border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; font-size: 12px; flex: none;
+  }
+  #kwClearBtn:hover { background: #33212e; }
   #kwSearchMsg { font-size: 11px; color: #d18b4f; min-height: 14px; margin-top: 4px; }
 
   #kwResultsOverlay {
@@ -321,10 +326,11 @@
 
   <div class="timeline" style="border-top: none; padding-top: 0; margin-top: 0;">
     <div class="timeline-title">🔎 Keyword search</div>
-    <div class="sub" style="margin: 1px 0 0 0;">Searches titles, subject headings, and place names across all records — independent of the timelines/filters below.</div>
+    <div class="sub" style="margin: 1px 0 0 0;">Searches titles, subject headings, and place names across all records — independent of the timelines/filters below. Matched locations also get a <b style="color:#ff4fd8;">pink ring</b> on the map itself.</div>
     <div id="kwSearchRow">
       <input type="text" id="kwSearchInput" placeholder="e.g. famine, Cossack, Odesa…">
       <button id="kwSearchBtn" type="button">Search</button>
+      <button id="kwClearBtn" type="button" title="Clear the search box, results, and the pink ring(s) on the map">✕ Clear</button>
     </div>
     <div id="kwSearchMsg"></div>
   </div>
@@ -2746,6 +2752,75 @@ function unpinLocation() {
 document.getElementById('pinBackBtn').addEventListener('click', unpinLocation);
 map.on('click', () => { if (pinnedRecords) unpinLocation(); });
 
+// --- keyword-search map highlight ----------------------------------------
+// Search itself deliberately ignores the current filters/timeline (see the
+// comment below), which means the results list can point at locations
+// nowhere near what's currently drawn on the map -- from the map's point of
+// view a search used to do nothing at all. This layer closes that gap: every
+// matched subject location gets a bright ring on top of whatever's already
+// rendered (bubbles/hex/heat, any style), independent of the normal
+// about/ancient/publication layers so it survives style and filter changes
+// without needing to hook into every marker-creation path, and the map
+// flies to fit whatever it finds.
+const searchHighlightLayer = L.featureGroup().addTo(map);
+function clearSearchHighlight() { searchHighlightLayer.clearLayers(); }
+
+// #leftPanel and #rightPanel are docked ON TOP of the full-bleed #map (see
+// their CSS: position:absolute over the map, not beside it) -- so a plain
+// flyTo/fitBounds that only knows about the map's raw pixel size can happily
+// center a marker exactly underneath one of them. It'll still be visible
+// (the panels are dark but not opaque enough to fully hide markers behind
+// them), but clicks on that spot hit the panel, not the map -- which reads
+// as "I clicked the marker and nothing happened." Measuring the panels'
+// actual widths live (rather than hardcoding them) also covers the
+// right panel's collapsed state, which is much narrower than expanded.
+function panelClearance() {
+  const l = document.getElementById('leftPanel');
+  const r = document.getElementById('rightPanel');
+  return {
+    left: (l ? l.getBoundingClientRect().width : 0) + 40,
+    right: (r ? r.getBoundingClientRect().width : 0) + 40,
+    top: 30, bottom: 30
+  };
+}
+function flyToClearOfPanels(latlngs, multiMaxZoom) {
+  switchToMapView();
+  const c = panelClearance();
+  map.flyToBounds(L.latLngBounds(latlngs), {
+    paddingTopLeft: [c.left, c.top],
+    paddingBottomRight: [c.right, c.bottom],
+    maxZoom: latlngs.length > 1 ? (multiMaxZoom || 7) : Math.max(map.getZoom(), 6)
+  });
+}
+
+function renderSearchHighlight(groups) {
+  searchHighlightLayer.clearLayers();
+  const bounds = [];
+  for (const grp of groups) {
+    if (grp.name === NO_ABOUT_LOCATION) continue;
+    const xy = geonameXY(grp.name) || placeXY(grp.name);
+    if (!xy) continue;
+    bounds.push(xy);
+    const ring = L.circleMarker(xy, {
+      radius: 14, color: '#ff4fd8', weight: 3, opacity: 0.95,
+      fillColor: '#ff4fd8', fillOpacity: 0.08, dashArray: '4,3'
+    });
+    ring.bindTooltip(
+      escapeHtml(grp.name) + ' — ' + grp.records.length + ' matching record' + (grp.records.length === 1 ? '' : 's'),
+      { direction: 'top' }
+    );
+    // stopPropagation matters here: the normal bubble markers get this
+    // for free because bindPopup()'s own click handling stops it, but this
+    // ring only has a tooltip -- without it, the click bubbles up to the
+    // map's own click handler (map.on('click', ...) below), which unpins
+    // whatever pinLocation() just pinned, one line later, in the same click.
+    ring.on('click', (e) => { L.DomEvent.stopPropagation(e); closeKeywordResults(); pinLocation(grp.name, grp.records); });
+    ring.addTo(searchHighlightLayer);
+  }
+  if (bounds.length) flyToClearOfPanels(bounds);
+  return bounds.length;
+}
+
 // --- keyword search: title / subject headings / place names, across the
 // WHOLE collection regardless of the current timeline or filters (unlike
 // everything else in this app, which tracks "what's currently visible").
@@ -2769,6 +2844,7 @@ document.getElementById('noAboutSummary').textContent =
 document.getElementById('noAboutBtn').addEventListener('click', () => {
   kwCurrentGroups = [{ name: NO_ABOUT_LOCATION, records: noAboutRecords }];
   kwCurrentQuery = '';
+  clearSearchHighlight(); // this group is placeless by definition -- nothing to ring
   document.getElementById('kwResultsTitle').textContent = 'Records with no temporal-aboutness data';
   document.getElementById('kwResultsSummary').textContent =
     noAboutRecords.length + ' of ' + DATA.records.length + ' records have no place-with-date subject heading ' +
@@ -2838,12 +2914,18 @@ function doKeywordSearch() {
   kwCurrentGroups = Array.from(groups.values());
   kwCurrentQuery = qRaw;
   const locCount = kwCurrentGroups.filter(g => g.name !== NO_ABOUT_LOCATION).length;
+  const shownCount = renderSearchHighlight(kwCurrentGroups);
   document.getElementById('kwResultsTitle').textContent = 'Search: “' + qRaw + '”';
   document.getElementById('kwResultsSummary').textContent =
     matches.length + ' record' + (matches.length === 1 ? '' : 's') + ' matched, across ' + locCount +
     ' subject location' + (locCount === 1 ? '' : 's') +
     (groups.has(NO_ABOUT_LOCATION) ? ' (plus ' + groups.get(NO_ABOUT_LOCATION).records.length + ' with no subject location on record)' : '') +
-    ' — searched titles, subject headings, and place names across all ' + DATA.records.length + ' records.';
+    ' — searched titles, subject headings, and place names across all ' + DATA.records.length + ' records. ' +
+    (shownCount
+      ? shownCount + ' of those location(s) now ringed in pink on the map (switch to Map view, or close this panel to see it).'
+      : locCount
+        ? 'None of those locations have known map coordinates, so nothing is ringed on the map this time.'
+        : '');
   renderKeywordResults();
   document.getElementById('kwResultsOverlay').classList.add('open');
 }
@@ -2884,7 +2966,7 @@ function renderKeywordResults() {
         closeKeywordResults();
         pinLocation(grp.name, grp.records);
         const xy = geonameXY(grp.name) || placeXY(grp.name);
-        if (xy) { switchToMapView(); map.flyTo(xy, Math.max(map.getZoom(), 6)); }
+        if (xy) flyToClearOfPanels([xy]);
       });
     }
     div.appendChild(header);
@@ -2903,7 +2985,7 @@ function renderKeywordResults() {
         closeKeywordResults();
         pinLocation(grp.name, grp.records);
         const xy = isReal ? (geonameXY(grp.name) || placeXY(grp.name)) : null;
-        if (xy) { switchToMapView(); map.flyTo(xy, Math.max(map.getZoom(), 6)); }
+        if (xy) flyToClearOfPanels([xy]);
       });
       list.appendChild(row);
     });
@@ -2923,7 +3005,20 @@ function closeKeywordResults() {
   document.getElementById('kwResultsOverlay').classList.remove('open');
 }
 
+// Undoes everything a search does: the typed term, the results overlay, and
+// (since that ring now deliberately outlives closing the overlay -- see
+// renderSearchHighlight above) the pink ring(s) left on the map.
+function clearKeywordSearch() {
+  document.getElementById('kwSearchInput').value = '';
+  document.getElementById('kwSearchMsg').textContent = '';
+  kwCurrentGroups = [];
+  kwCurrentQuery = '';
+  clearSearchHighlight();
+  closeKeywordResults();
+}
+
 document.getElementById('kwSearchBtn').addEventListener('click', doKeywordSearch);
+document.getElementById('kwClearBtn').addEventListener('click', clearKeywordSearch);
 document.getElementById('kwSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doKeywordSearch(); });
 document.getElementById('kwResultsClose').addEventListener('click', closeKeywordResults);
 document.getElementById('kwResultsOverlay').addEventListener('click', e => { if (e.target.id === 'kwResultsOverlay') closeKeywordResults(); });
