@@ -262,6 +262,19 @@
   }
   #kwClearBtn:hover { background: #33212e; }
   #kwSearchMsg { font-size: 11px; color: #d18b4f; min-height: 14px; margin-top: 4px; }
+  #kwActiveBanner {
+    display: none; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 11px; color: #e8b8dc; background: #241a22; border: 1px solid #4a2e42;
+    border-radius: 6px; padding: 6px 10px; margin-top: 6px;
+  }
+  #kwActiveBanner.active { display: flex; }
+  #kwActiveBannerText { flex: 1; min-width: 0; }
+  #kwActiveBannerBtns { display: flex; gap: 6px; flex: none; }
+  #kwActiveBannerBtns button {
+    background: #2b3542; color: #e8e8e8; border: 1px solid #47535f; border-radius: 5px;
+    padding: 3px 8px; cursor: pointer; font-size: 11px;
+  }
+  #kwActiveBannerBtns button:hover { background: #37424f; }
 
   #kwResultsOverlay {
     display: none; position: fixed; inset: 0; z-index: 5000;
@@ -326,13 +339,20 @@
 
   <div class="timeline" style="border-top: none; padding-top: 0; margin-top: 0;">
     <div class="timeline-title">🔎 Keyword search</div>
-    <div class="sub" style="margin: 1px 0 0 0;">Searches titles, subject headings, and place names across all records — independent of the timelines/filters below. Matched locations also get a <b style="color:#ff4fd8;">pink ring</b> on the map itself.</div>
+    <div class="sub" style="margin: 1px 0 0 0;">Searches titles, subject headings, and place names, restricted to the current timeline &amp; language filter below — a record only matches if it's <b style="color:#e8e8e8;">also</b> about somewhere within the active date range. The map itself switches to showing <b style="color:#e8e8e8;">just the matched location(s)</b>. If you change the timeline, hit Search again to refresh.</div>
     <div id="kwSearchRow">
       <input type="text" id="kwSearchInput" placeholder="e.g. famine, Cossack, Odesa…">
       <button id="kwSearchBtn" type="button">Search</button>
-      <button id="kwClearBtn" type="button" title="Clear the search box, results, and the pink ring(s) on the map">✕ Clear</button>
+      <button id="kwClearBtn" type="button" title="Clear the search box and results, and restore the full map">✕ Clear</button>
     </div>
     <div id="kwSearchMsg"></div>
+    <div id="kwActiveBanner">
+      <span id="kwActiveBannerText"></span>
+      <span id="kwActiveBannerBtns">
+        <button id="kwActiveBannerView" type="button">View list</button>
+        <button id="kwActiveBannerClear" type="button">✕ Clear</button>
+      </span>
+    </div>
   </div>
 
   <div class="style-row">
@@ -688,6 +708,34 @@ function placeXY(name) { const c = DATA.placeCoords[name]; return c ? [c[0], c[1
 let currentAboutRange = [DATA.aboutYearMin, DATA.aboutYearMax];
 let currentPubRange = [DATA.pubYearMin, DATA.pubYearMax];
 
+// Non-null while a keyword search is active. Two complementary filters, both
+// built from the exact records the search actually matched (kwCurrentGroups):
+//   searchGeonameFilter: Map<geoname, Set<recordId>> -- for the "about"
+//     (modern + ancient) layers, keyed by geoname because a record can have
+//     several about-mentions and only some of them may be the ones that
+//     matched. A geoname-only check here is not enough: a high-volume place
+//     like "Ukraine" being in the allow-list would otherwise let through
+//     every OTHER record that happens to mention Ukraine too, regardless of
+//     whether it matched the search at all.
+//   searchRecordFilter: Set<recordId> -- the full set of matched record ids
+//     (including ones with no plottable "about" location), for anything that
+//     doesn't key off a geoname -- the publication-place layer and the
+//     right-panel "visible records" count in particular.
+// Read by renderModernRange/renderAncient/renderPubRange/
+// recomputeVisibleRecords below (every other filter -- date range, language
+// -- already funnels through those functions, so this is the same
+// mechanism, not a bolt-on).
+let searchGeonameFilter = null;
+let searchRecordFilter = null;
+function searchAllowsAbout(geoname, recordId) {
+  if (!searchGeonameFilter) return true;
+  const allowed = searchGeonameFilter.get(geoname);
+  return !!allowed && allowed.has(recordId);
+}
+function searchAllowsRecord(recordId) {
+  return !searchRecordFilter || searchRecordFilter.has(recordId);
+}
+
 // When on, the "aboutness" and "publication" layers each additionally
 // require the OTHER timeline's condition too (an AND across both axes),
 // rather than the default independent behavior. Mirrors the same
@@ -845,6 +893,7 @@ function renderModernRange(minY, maxY) {
     for (const m of r.about) {
       if (m.s < DATA.ancientCutoff) continue;
       if (!(m.s <= maxY && m.e >= minY)) continue;
+      if (!searchAllowsAbout(m.g, r.id)) continue;
       const xy = geonameXY(m.g);
       const agg = xy ? byGeoname : unknownAgg;
       let acc = agg.get(m.g);
@@ -917,6 +966,7 @@ function renderAncient(minY, maxY) {
     for (const m of r.about) {
       if (m.s >= DATA.ancientCutoff) continue;
       if (!(m.s <= maxY && m.e >= minY)) continue;
+      if (!searchAllowsAbout(m.g, r.id)) continue;
       const xy = geonameXY(m.g);
       if (!xy) continue;
       let acc = byGeoname.get(m.g);
@@ -980,6 +1030,7 @@ function renderPubRange(minY, maxY) {
     if (!recordPassesLanguageFilter(r)) continue;
     if (r.pubY === null || r.pubY < minY || r.pubY > maxY) continue;
     if (requireAbout && !recordHasAboutInRange(r)) continue;
+    if (!searchAllowsRecord(r.id)) continue;
     if (r.pubP.length === 0) {
       let acc = unknownAgg.get(DATA.noPlaceLabel);
       if (!acc) { acc = { n: 0, titles: [] }; unknownAgg.set(DATA.noPlaceLabel, acc); }
@@ -2473,13 +2524,14 @@ function recomputeVisibleRecords() {
         if (isAncient && !showAncient) continue;
         if (!isAncient && !showModern) continue;
         if (!(m.s <= aHi && m.e >= aLo)) continue;
+        if (!searchAllowsAbout(m.g, r.id)) continue;
         const xy = geonameXY(m.g);
         if (!xy || !bounds.contains(xy)) continue;
         included = true;
         break;
       }
     }
-    if (!included && showPub && r.pubY !== null && r.pubY >= pLo && r.pubY <= pHi) {
+    if (!included && showPub && r.pubY !== null && r.pubY >= pLo && r.pubY <= pHi && searchAllowsRecord(r.id)) {
       for (const place of r.pubP) {
         const xy = placeXY(place);
         if (!xy || !bounds.contains(xy)) continue;
@@ -2752,18 +2804,50 @@ function unpinLocation() {
 document.getElementById('pinBackBtn').addEventListener('click', unpinLocation);
 map.on('click', () => { if (pinnedRecords) unpinLocation(); });
 
-// --- keyword-search map highlight ----------------------------------------
+// --- keyword-search map filter ---------------------------------------
 // Search itself deliberately ignores the current filters/timeline (see the
-// comment below), which means the results list can point at locations
+// comment below), which means the results list used to point at locations
 // nowhere near what's currently drawn on the map -- from the map's point of
-// view a search used to do nothing at all. This layer closes that gap: every
-// matched subject location gets a bright ring on top of whatever's already
-// rendered (bubbles/hex/heat, any style), independent of the normal
-// about/ancient/publication layers so it survives style and filter changes
-// without needing to hook into every marker-creation path, and the map
-// flies to fit whatever it finds.
-const searchHighlightLayer = L.featureGroup().addTo(map);
-function clearSearchHighlight() { searchHighlightLayer.clearLayers(); }
+// view a search did nothing at all. This closes that gap by restricting the
+// about/ancient layers to just the matched geonames (via searchGeonameFilter,
+// declared above) and redrawing them through the SAME renderModernRange/
+// renderAncient functions every other filter uses -- so a search actually
+// replaces what's on the map with just the relevant markers, in their normal
+// style (bubbles/hex/heat, whichever is active), rather than piling a second
+// set of special-colored markers on top of everything already there.
+function clearSearchFilter() {
+  if (!searchGeonameFilter && !searchRecordFilter) return;
+  searchGeonameFilter = null;
+  searchRecordFilter = null;
+  renderModernRange(currentAboutRange[0], currentAboutRange[1]);
+  renderAncient(currentAboutRange[0], currentAboutRange[1]);
+  renderPubRange(currentPubRange[0], currentPubRange[1]);
+  updateSearchBanner(null);
+}
+// Takes the actual matched GROUP OBJECTS (each { name, records, ... } --
+// records is the list of records that matched under that geoname; the
+// NO_ABOUT_LOCATION pseudo-group's records have no plottable geoname at all)
+// -- not just names -- so the resulting filter can be record-ID-aware, not
+// just geoname-aware. See searchGeonameFilter/searchRecordFilter above for
+// why that distinction matters.
+function applySearchFilter(groups) {
+  const geoMap = new Map();
+  const recIds = new Set();
+  for (const grp of groups) {
+    if (grp.name !== NO_ABOUT_LOCATION) {
+      let s = geoMap.get(grp.name);
+      if (!s) { s = new Set(); geoMap.set(grp.name, s); }
+      for (const r of grp.records) { s.add(r.id); recIds.add(r.id); }
+    } else {
+      for (const r of grp.records) recIds.add(r.id);
+    }
+  }
+  searchGeonameFilter = geoMap;
+  searchRecordFilter = recIds;
+  renderModernRange(currentAboutRange[0], currentAboutRange[1]);
+  renderAncient(currentAboutRange[0], currentAboutRange[1]);
+  renderPubRange(currentPubRange[0], currentPubRange[1]);
+}
 
 // #leftPanel and #rightPanel are docked ON TOP of the full-bleed #map (see
 // their CSS: position:absolute over the map, not beside it) -- so a plain
@@ -2794,40 +2878,44 @@ function flyToClearOfPanels(latlngs, multiMaxZoom) {
 }
 
 function renderSearchHighlight(groups) {
-  searchHighlightLayer.clearLayers();
   const bounds = [];
   for (const grp of groups) {
     if (grp.name === NO_ABOUT_LOCATION) continue;
     const xy = geonameXY(grp.name) || placeXY(grp.name);
     if (!xy) continue;
     bounds.push(xy);
-    const ring = L.circleMarker(xy, {
-      radius: 14, color: '#ff4fd8', weight: 3, opacity: 0.95,
-      fillColor: '#ff4fd8', fillOpacity: 0.08, dashArray: '4,3'
-    });
-    ring.bindTooltip(
-      escapeHtml(grp.name) + ' — ' + grp.records.length + ' matching record' + (grp.records.length === 1 ? '' : 's'),
-      { direction: 'top' }
-    );
-    // stopPropagation matters here: the normal bubble markers get this
-    // for free because bindPopup()'s own click handling stops it, but this
-    // ring only has a tooltip -- without it, the click bubbles up to the
-    // map's own click handler (map.on('click', ...) below), which unpins
-    // whatever pinLocation() just pinned, one line later, in the same click.
-    ring.on('click', (e) => { L.DomEvent.stopPropagation(e); closeKeywordResults(); pinLocation(grp.name, grp.records); });
-    ring.addTo(searchHighlightLayer);
   }
+  applySearchFilter(groups);
   if (bounds.length) flyToClearOfPanels(bounds);
   return bounds.length;
 }
 
-// --- keyword search: title / subject headings / place names, across the
-// WHOLE collection regardless of the current timeline or filters (unlike
-// everything else in this app, which tracks "what's currently visible").
-// Results are grouped by subject place (the geonames a record is ABOUT --
-// the same concept the map/network views are built from), since that's
-// the grouping a "locations, with titles under them" request is asking
-// for; a record about more than one place appears under each of them.
+// Small status strip, docked in the left panel just under the search box, so
+// "the map is currently filtered by a search" stays visible even after the
+// results list/modal is closed -- previously the ONLY sign a search filter
+// was still active was that modal, so closing it made the filter feel like
+// it had silently vanished (it hadn't -- but nothing on screen said so).
+// label === null hides the strip and means no filter is active.
+function updateSearchBanner(label, canReopen) {
+  const banner = document.getElementById('kwActiveBanner');
+  const text = document.getElementById('kwActiveBannerText');
+  const viewBtn = document.getElementById('kwActiveBannerView');
+  if (!banner || !text) return;
+  if (!label) { banner.classList.remove('active'); return; }
+  text.textContent = label;
+  if (viewBtn) viewBtn.style.display = canReopen ? '' : 'none';
+  banner.classList.add('active');
+}
+
+// --- keyword search: title / subject headings / place names -- intersected
+// with the SAME "what's currently visible" filters as everything else in
+// this app (timeline, ancient/modern toggle, language), so the results
+// list, the map, and the timeline slider never disagree about what counts
+// as a match (see doKeywordSearch below for exactly how). Results are
+// grouped by subject place (the geonames a record is ABOUT -- the same
+// concept the map/network views are built from), since that's the grouping
+// a "locations, with titles under them" request is asking for; a record
+// about more than one (in-range) place appears under each of them.
 const NO_ABOUT_LOCATION = '(no subject location on this record)';
 let kwCurrentGroups = [];
 let kwCurrentQuery = '';
@@ -2844,7 +2932,7 @@ document.getElementById('noAboutSummary').textContent =
 document.getElementById('noAboutBtn').addEventListener('click', () => {
   kwCurrentGroups = [{ name: NO_ABOUT_LOCATION, records: noAboutRecords }];
   kwCurrentQuery = '';
-  clearSearchHighlight(); // this group is placeless by definition -- nothing to ring
+  clearSearchFilter(); // this group is placeless by definition -- nothing to filter the map to
   document.getElementById('kwResultsTitle').textContent = 'Records with no temporal-aboutness data';
   document.getElementById('kwResultsSummary').textContent =
     noAboutRecords.length + ' of ' + DATA.records.length + ' records have no place-with-date subject heading ' +
@@ -2890,42 +2978,93 @@ function kwHighlight(text, q) {
   return t.slice(0, idx) + '<mark>' + t.slice(idx, idx + q.length) + '</mark>' + t.slice(idx + q.length);
 }
 
+// Search is intersected with the SAME filters the map itself is currently
+// using -- the temporal-aboutness timeline, the modern/ancient toggles, the
+// language filter, and (if "intersect timelines" is on) the publication
+// range -- so the results list, the map, and the timeline slider always
+// describe the exact same set of records instead of quietly disagreeing
+// (a record can only match if it has an about-mention that ALSO overlaps
+// the current timeline). The one exception: records with NO about-mention
+// at all (biographies, etc.) can never be plotted regardless of the
+// timeline, so they're unaffected by it, same as before -- they're not
+// part of the map/timeline consistency this is fixing.
 function doKeywordSearch() {
   const qRaw = document.getElementById('kwSearchInput').value.trim();
   const msg = document.getElementById('kwSearchMsg');
   if (!qRaw) { msg.textContent = 'Type a term to search for.'; return; }
   const q = qRaw.toLowerCase();
-  const matches = DATA.records.filter(r => kwSearchText(r).includes(q));
-  if (!matches.length) {
+  const rawMatches = DATA.records.filter(r => kwSearchText(r).includes(q));
+  if (!rawMatches.length) {
     msg.textContent = 'No records match “' + qRaw + '”.';
+    kwCurrentGroups = [];
+    clearSearchFilter();
     return;
   }
-  msg.textContent = '';
+
+  const showModern = document.getElementById('toggleModern').checked;
+  const showAncient = document.getElementById('toggleAncient').checked;
+  const [aLo, aHi] = currentAboutRange;
+  const requirePub = intersectRequiresPub();
+
   const groups = new Map(); // geoname (or NO_ABOUT_LOCATION) -> {name, recordSet, records}
-  for (const r of matches) {
-    const geonames = Array.from(new Set(r.about.map(m => m.g)));
-    if (!geonames.length) geonames.push(NO_ABOUT_LOCATION);
+  let inRangeCount = 0, outOfRangeCount = 0;
+  for (const r of rawMatches) {
+    if (!recordPassesLanguageFilter(r)) continue;
+    if (requirePub && !recordHasPubInRange(r)) continue;
+    if (!r.about.length) {
+      let grp = groups.get(NO_ABOUT_LOCATION);
+      if (!grp) { grp = { name: NO_ABOUT_LOCATION, recordSet: new Set(), records: [] }; groups.set(NO_ABOUT_LOCATION, grp); }
+      if (!grp.recordSet.has(r.id)) { grp.recordSet.add(r.id); grp.records.push(r); }
+      inRangeCount++;
+      continue;
+    }
+    const geonames = [];
+    const seen = new Set();
+    for (const m of r.about) {
+      const isAncient = m.s < DATA.ancientCutoff;
+      if (isAncient && !showAncient) continue;
+      if (!isAncient && !showModern) continue;
+      if (!(m.s <= aHi && m.e >= aLo)) continue;
+      if (!seen.has(m.g)) { seen.add(m.g); geonames.push(m.g); }
+    }
+    if (!geonames.length) { outOfRangeCount++; continue; }
+    inRangeCount++;
     for (const g of geonames) {
       let grp = groups.get(g);
       if (!grp) { grp = { name: g, recordSet: new Set(), records: [] }; groups.set(g, grp); }
       if (!grp.recordSet.has(r.id)) { grp.recordSet.add(r.id); grp.records.push(r); }
     }
   }
+
+  if (!inRangeCount) {
+    msg.textContent = outOfRangeCount
+      ? outOfRangeCount + ' record(s) match “' + qRaw + '” but none fall inside the current timeline (' +
+        fmtRange(aLo, aHi) + ') — widen the date range, or toggle Ancient/medieval, to see them.'
+      : 'No records match “' + qRaw + '” with the current language/timeline filters.';
+    kwCurrentGroups = [];
+    clearSearchFilter();
+    return;
+  }
+  msg.textContent = '';
   kwCurrentGroups = Array.from(groups.values());
   kwCurrentQuery = qRaw;
   const locCount = kwCurrentGroups.filter(g => g.name !== NO_ABOUT_LOCATION).length;
   const shownCount = renderSearchHighlight(kwCurrentGroups);
   document.getElementById('kwResultsTitle').textContent = 'Search: “' + qRaw + '”';
   document.getElementById('kwResultsSummary').textContent =
-    matches.length + ' record' + (matches.length === 1 ? '' : 's') + ' matched, across ' + locCount +
+    inRangeCount + ' record' + (inRangeCount === 1 ? '' : 's') + ' matched within the current timeline & filters, across ' + locCount +
     ' subject location' + (locCount === 1 ? '' : 's') +
     (groups.has(NO_ABOUT_LOCATION) ? ' (plus ' + groups.get(NO_ABOUT_LOCATION).records.length + ' with no subject location on record)' : '') +
-    ' — searched titles, subject headings, and place names across all ' + DATA.records.length + ' records. ' +
+    ' — searched titles, subject headings, and place names, restricted to the active timeline (' + fmtRange(aLo, aHi) + ') and language filter.' +
+    (outOfRangeCount ? ' ' + outOfRangeCount + ' more record(s) matched the term but fall outside the current timeline/filters, so aren’t shown.' : '') +
+    ' ' +
     (shownCount
-      ? shownCount + ' of those location(s) now ringed in pink on the map (switch to Map view, or close this panel to see it).'
+      ? 'The map now shows only ' + shownCount + ' matching location(s) (switch to Map view, or close this panel to see it). Hit Clear to bring back the full map.'
       : locCount
-        ? 'None of those locations have known map coordinates, so nothing is ringed on the map this time.'
+        ? 'None of those locations have known map coordinates, so the map is unchanged this time.'
         : '');
+  updateSearchBanner('🔎 “' + qRaw + '” — ' + inRangeCount + ' record' + (inRangeCount === 1 ? '' : 's') +
+    ' matched, map showing ' + (shownCount || 0) + ' location' + (shownCount === 1 ? '' : 's'), true);
   renderKeywordResults();
   document.getElementById('kwResultsOverlay').classList.add('open');
 }
@@ -2966,7 +3105,11 @@ function renderKeywordResults() {
         closeKeywordResults();
         pinLocation(grp.name, grp.records);
         const xy = geonameXY(grp.name) || placeXY(grp.name);
-        if (xy) flyToClearOfPanels([xy]);
+        if (xy) {
+          applySearchFilter([grp]);
+          flyToClearOfPanels([xy]);
+          updateSearchBanner('🔎 “' + kwCurrentQuery + '” → ' + grp.name + ' (' + grp.records.length + ' record' + (grp.records.length === 1 ? '' : 's') + ')', true);
+        }
       });
     }
     div.appendChild(header);
@@ -2985,7 +3128,11 @@ function renderKeywordResults() {
         closeKeywordResults();
         pinLocation(grp.name, grp.records);
         const xy = isReal ? (geonameXY(grp.name) || placeXY(grp.name)) : null;
-        if (xy) flyToClearOfPanels([xy]);
+        if (xy) {
+          applySearchFilter([grp]);
+          flyToClearOfPanels([xy]);
+          updateSearchBanner('🔎 “' + kwCurrentQuery + '” → ' + grp.name + ' (' + grp.records.length + ' record' + (grp.records.length === 1 ? '' : 's') + ')', true);
+        }
       });
       list.appendChild(row);
     });
@@ -3006,14 +3153,14 @@ function closeKeywordResults() {
 }
 
 // Undoes everything a search does: the typed term, the results overlay, and
-// (since that ring now deliberately outlives closing the overlay -- see
-// renderSearchHighlight above) the pink ring(s) left on the map.
+// (since the map filter deliberately outlives closing the overlay -- see
+// renderSearchHighlight above) the map filter, restoring the full map.
 function clearKeywordSearch() {
   document.getElementById('kwSearchInput').value = '';
   document.getElementById('kwSearchMsg').textContent = '';
   kwCurrentGroups = [];
   kwCurrentQuery = '';
-  clearSearchHighlight();
+  clearSearchFilter();
   closeKeywordResults();
 }
 
@@ -3023,6 +3170,11 @@ document.getElementById('kwSearchInput').addEventListener('keydown', e => { if (
 document.getElementById('kwResultsClose').addEventListener('click', closeKeywordResults);
 document.getElementById('kwResultsOverlay').addEventListener('click', e => { if (e.target.id === 'kwResultsOverlay') closeKeywordResults(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeKeywordResults(); });
+document.getElementById('kwActiveBannerView').addEventListener('click', () => {
+  renderKeywordResults();
+  document.getElementById('kwResultsOverlay').classList.add('open');
+});
+document.getElementById('kwActiveBannerClear').addEventListener('click', clearKeywordSearch);
 document.querySelectorAll('input[name="kwSortLoc"], input[name="kwSortTitle"]').forEach(input => {
   input.addEventListener('change', renderKeywordResults);
 });
