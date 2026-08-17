@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Subject Themes in Ukraine's History — a river of the DK508 catalog</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  .viz-root {
+    color-scheme: dark;
+    --surface-1:      #0b0d10;
+    --surface-2:      #171a20;
+    --text-primary:   #f2f3f5;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c333b;
+    --baseline:       #3a4048;
+    --border:         rgba(255,255,255,0.10);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #0b0d10; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #f2f3f5;
+  }
+  .viz-root { max-width: 1180px; margin: 0 auto; padding: 28px 28px 40px; background: var(--surface-1); }
+
+  h1 { font-size: 21px; font-weight: 700; margin: 0 0 6px 0; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-secondary); font-size: 13.5px; line-height: 1.55; max-width: 880px; margin: 0 0 4px 0; }
+  .methodology {
+    color: var(--text-muted); font-size: 12px; line-height: 1.6; max-width: 880px;
+    margin: 10px 0 20px 0; border-left: 2px solid var(--gridline); padding-left: 12px;
+  }
+  .methodology b { color: var(--text-secondary); }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .toolbar button {
+    background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 12px; font-size: 12.5px; cursor: pointer;
+    font-family: inherit;
+  }
+  .toolbar button:hover { background: #202631; }
+  .toolbar button.active { background: #2a3444; border-color: #4a5a72; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .hint { color: var(--text-muted); font-size: 11.5px; }
+
+  #chartWrap { position: relative; }
+  svg { display: block; width: 100%; height: auto; }
+  .axis text { fill: var(--text-muted); font-size: 11px; }
+  .axis path, .axis line { stroke: var(--gridline); }
+  .gridline { stroke: var(--gridline); stroke-width: 1px; }
+  .pre-data-line { stroke: var(--text-muted); stroke-width: 1.25px; stroke-dasharray: 1,3.4; stroke-linecap: round; opacity: 0.7; }
+
+  .area-band { stroke: var(--surface-1); stroke-width: 1.25px; }
+
+  .band-label { font-size: 12.5px; font-weight: 700; paint-order: stroke; stroke: var(--surface-1); stroke-width: 4px; }
+
+  .crosshair { stroke: var(--text-secondary); stroke-width: 1px; opacity: 0; pointer-events: none; }
+  .hover-dot { stroke: var(--surface-1); stroke-width: 2px; opacity: 0; pointer-events: none; }
+
+  #tooltip {
+    position: absolute; pointer-events: none; opacity: 0; z-index: 20;
+    background: #1b1f26; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.5; max-width: 340px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  #tooltip .year { font-weight: 700; font-size: 13px; color: var(--text-primary); margin-bottom: 4px; }
+  #tooltip .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+  #tooltip .swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  #tooltip .titles-head { color: var(--text-secondary); margin-top: 6px; font-size: 11px; font-weight: 600; }
+  #tooltip .title-row { color: var(--text-muted); font-style: italic; margin-top: 3px; font-size: 11px; display: flex; gap: 5px; }
+  #tooltip .title-row b { color: var(--text-secondary); font-style: normal; flex: none; }
+
+  .legend { display: flex; gap: 18px; margin: 14px 0 4px 0; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+  .legend-swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+
+  #tableView { display: none; margin-top: 10px; }
+  #tableView table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #tableView th, #tableView td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--gridline); }
+  #tableView th:first-child, #tableView td:first-child { text-align: left; }
+  #tableView th { color: var(--text-muted); font-weight: 600; position: sticky; top: 0; background: var(--surface-1); }
+  #tableView .tbl-scroll { max-height: 480px; overflow-y: auto; border: 1px solid var(--gridline); border-radius: 8px; }
+
+  .footer-note { color: var(--text-muted); font-size: 11.5px; margin-top: 16px; line-height: 1.6; max-width: 880px; }
+
+  .companion-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  #companionLink1, #companionLink2, #aboutLink {
+    display: inline-block; font-size: 12px; color: #9fc7ff; text-decoration: none;
+    border: 1px solid #2c3f5c; background: #131b28; border-radius: 5px;
+    padding: 4px 9px;
+  }
+  #companionLink1:hover, #companionLink2:hover { background: #182233; text-decoration: underline; }
+  #aboutLink { color: var(--text-secondary); border-color: var(--gridline); background: var(--surface-2); }
+  #aboutLink:hover { background: #1d2229; }
+</style>
+</head>
+<body>
+<div class="viz-root" data-palette="#3987e5,#d95926,#199e70,#c98500,#d55181,#008300,#9085e9">
+  <h1>Subject Themes in Ukraine's History</h1>
+  <div class="companion-row">
+    <a id="aboutLink" href="dk508_landing.html" target="_blank" rel="noopener" title="About this project: data, motivation, and methodology">← About this project</a>
+    <a id="companionLink1" href="dk508_temporal_map.html" target="_blank" rel="noopener" title="Opens the companion map/network explorer -- keep both files in the same folder for this link to work">🗺️ Companion map &amp; network explorer →</a>
+    <a id="companionLink2" href="dk508_influence_river.html" target="_blank" rel="noopener" title="Opens the companion geographic river (Russia &amp; Poland) -- keep both files in the same folder for this link to work">📈 Companion chart: Russia &amp; Poland river →</a>
+  </div>
+  <p class="subtitle">
+    How much publishing attention seven of the DK508 (Ukraine — History) catalog's own subject
+    themes — not places — have received, year by year from 1727 to 2016. Unlike the companion
+    Russia/Poland river, this chart tracks <b>when books were published</b> about each theme, not
+    when the underlying events happened — see the methodology note for why, and how that changes
+    what the shape means.
+  </p>
+  <div class="methodology">
+    <b>What this measures:</b> for each year, how many distinct records whose subject headings
+    match one of seven hand-picked themes — <b>Politics and government, Foreign relations,
+    Antiquities, Nationalism &amp; independence movements, World War II, Revolution &amp; Civil
+    War (1917–21), Famine (Holodomor)</b> — were <i>published</i> that year (the same LC
+    call-number year used throughout this project), summed across
+    <b id="totalRecordsNum">—</b> records. These seven were chosen from the collection's actual
+    most frequent non-geographic heading segments, keeping only substantive historical/political
+    themes and excluding cataloging <i>form</i> subdivisions that rank just as high in the raw
+    counts — Biography, Congresses, Pictorial works, Dictionaries, Catalogs — which describe what
+    <i>kind</i> of book it is, not what it's about. A record can count under more than one theme.
+    <br><br>
+    <b>Why publication year, not event year:</b> the companion Russia/Poland river plots each
+    mention by the year its OWN subject-heading date subdivision covers (e.g. a heading dated
+    "1917–1921" counts toward those exact years) — but topical headings like "Nationalism" or
+    "Antiquities" carry no date of their own to borrow, and even the three themes named after a
+    specific episode overwhelmingly appear in books published <i>decades</i> after that episode,
+    about it, not from it: this catalog has no book physically published during the 1932–33
+    famine, for instance. So every band on this chart is dated the only way that's actually
+    possible here — by when the book itself came out — which makes this a chart of
+    <b>historiography</b> (when people wrote about a theme), not of the theme's own chronology.
+    The flowing curve is a <b id="smoothWindowNum">—</b>-year centered moving average of the raw
+    yearly counts, smoothed for legibility (even the largest band averages under 4 records/year
+    across 290 years); hover the chart, or switch to the table, for the exact unsmoothed number
+    behind any point.
+  </div>
+
+  <div class="toolbar">
+    <button id="btnChartView" class="active" type="button">Chart</button>
+    <button id="btnTableView" type="button">Table (by decade)</button>
+    <span class="spacer"></span>
+    <span class="hint">Hover the chart for year-by-year detail, incl. real record titles from the catalog.</span>
+  </div>
+
+  <div id="chartWrap">
+    <svg id="chart"></svg>
+    <div id="tooltip"></div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div id="tableView">
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr id="tableHead"></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer-note" id="footerNote"></div>
+</div>
+
+<script>
+const DATA = {"yearMin":1727,"yearMax":2016,"years":[1727,1728,1729,1730,1731,1732,1733,1734,1735,1736,1737,1738,1739,1740,1741,1742,1743,1744,1745,1746,1747,1748,1749,1750,1751,1752,1753,1754,1755,1756,1757,1758,1759,1760,1761,1762,1763,1764,1765,1766,1767,1768,1769,1770,1771,1772,1773,1774,1775,1776,1777,1778,1779,1780,1781,1782,1783,1784,1785,1786,1787,1788,1789,1790,1791,1792,1793,1794,1795,1796,1797,1798,1799,1800,1801,1802,1803,1804,1805,1806,1807,1808,1809,1810,1811,1812,1813,1814,1815,1816,1817,1818,1819,1820,1821,1822,1823,1824,1825,1826,1827,1828,1829,1830,1831,1832,1833,1834,1835,1836,1837,1838,1839,1840,1841,1842,1843,1844,1845,1846,1847,1848,1849,1850,1851,1852,1853,1854,1855,1856,1857,1858,1859,1860,1861,1862,1863,1864,1865,1866,1867,1868,1869,1870,1871,1872,1873,1874,1875,1876,1877,1878,1879,1880,1881,1882,1883,1884,1885,1886,1887,1888,1889,1890,1891,1892,1893,1894,1895,1896,1897,1898,1899,1900,1901,1902,1903,1904,1905,1906,1907,1908,1909,1910,1911,1912,1913,1914,1915,1916,1917,1918,1919,1920,1921,1922,1923,1924,1925,1926,1927,1928,1929,1930,1931,1932,1933,1934,1935,1936,1937,1938,1939,1940,1941,1942,1943,1944,1945,1946,1947,1948,1949,1950,1951,1952,1953,1954,1955,1956,1957,1958,1959,1960,1961,1962,1963,1964,1965,1966,1967,1968,1969,1970,1971,1972,1973,1974,1975,1976,1977,1978,1979,1980,1981,1982,1983,1984,1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016],"smoothWindow":5,"bandOrder":["politics","antiquities","foreign_relations","wwii","revolution","nationalism","famine"],"bandLabel":{"politics":"Politics and government","antiquities":"Antiquities","foreign_relations":"Foreign relations","wwii":"World War II, 1939–1945","revolution":"Revolution & Civil War, 1917–21","nationalism":"Nationalism & independence movements","famine":"Famine (Holodomor)"},"bandColor":{"politics":"#3987e5","antiquities":"#d95926","foreign_relations":"#199e70","wwii":"#c98500","revolution":"#d55181","nationalism":"#008300","famine":"#9085e9"},"bandMatch":{"politics":["Politics and government"],"antiquities":["Antiquities"],"foreign_relations":["Foreign relations"],"wwii":["World War, 1939-1945"],"revolution":["Revolution, 1917-1921"],"nationalism":["Nationalism","Autonomy and independence movements"],"famine":["Famine","Famines"]},"series":{"politics":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,0,0,0,2,0,0,2,0,2,0,0,1,2,1,0,1,1,0,3,2,3,1,0,1,2,3,4,1,5,6,3,13,7,6,7,9,3,8,6,6,20,25,26,23,32,24,33,26,36,42,42,31,30,35,55,44,33,30,33,36,32,20,53,32,0],"antiquities":[4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,2,0,0,2,0,0,0,1,1,0,0,0,0,8,9,5,10,10,7,11,12,12,10,12,14,11,13,7,8,9,14,20,10,9,16,15,19,21,19,15,14,10,22,12,10,9,5,0,0],"foreign_relations":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,2,2,0,1,1,3,7,9,6,7,10,10,15,11,13,12,9,9,9,10,21,8,12,6,8,8,4,29,20,1],"wwii":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,1,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1,2,1,4,1,0,2,1,1,3,1,1,1,3,3,6,4,4,8,8,11,8,8,6,9,8,7,9,12,4,6,5,4,1,1],"revolution":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,0,1,0,0,0,0,0,0,0,0,1,1,0,1,3,2,0,0,1,0,1,0,1,0,2,0,0,1,3,1,1,0,3,4,9,5,11,5,7,10,10,8,5,12,11,14,8,8,6,12,4,7,7,6,9,5,0,0],"nationalism":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,2,2,3,1,2,3,0,1,0,1,0,0,1,0,2,2,2,1,1,4,1,1,1,2,1,0,0,3,2,7,14,3,11,5,6,2,7,4,1,3,5,8,23,16,17,23,26,26,29,33,25,35,21,26,27,25,17,13,13,12,14,9,6,16,8,0],"famine":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,1,0,0,0,1,0,0,0,0,2,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,8,2,2,3,1,20,0,3,3,2,14,0,1,2,2,3,2,4,3,4,17,7,9,11,15,85,12,3,7,2,7,2,3,0]},"decadeTitles":{"politics":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Miz︠h︡ vichnymy poli︠u︡samy /","Russia and Ukraine :","--\"I︠A︡ povstai︠u︡, otz︠h︡e, i︠a︡ isnui︠u︡ ...\" :"],"2000":["\"Ukrainskiĭ vopros\" v politike vlasteĭ i russkom obshchestvennom mnenii (vtorai︠a︡ polovina XIX v.) /","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;","Pulʹs ukraïnsʹkoï nezalez︠h︡nosti :","Ukuraina no gendai seiji /"],"1960":["Russian oppression in Ukraine;","Pry dz︠h︡erelakh borotʹby :","Heĭ, tam na hori \"Sich\" ide! :","Vybrani pratsi."],"1910":["Vilʹna Ukraïna.","L'Ukraine depuis l'armistice /"],"1940":["Seredzemne more i Ukraïna /","Samostiĭna Ukraïna /","Ukraïna i Krym v istorychnykh vzai︠e︡mynakh /"],"1970":["Ferment in the Ukraine;","Lysty Dmytra Doroshenka do Vi︠a︡cheslava Lypynsʹkoho.","Vybrani statti i promovy.","Materii︠a︡ly kongresu."],"1980":["Ukrainian nationalism /","Pohrom v Ukraïni, 1972-1979 /","I︠A︡ka orii︠e︡ntat︠s︡ii︠a︡? /","Ukraine and Poland in documents, 1918-1922 /"],"1930":["Le calvaire d'un peuple :","Za diĭsne vyi︠a︡snenni︠a︡ poloz︠h︡enni︠a︡ na Radi︠a︡nsʹkiĭ Ukraïni! /","Di raṭn in ḳamf far der generaler parṭaylinye /"],"1950":["In quest of freedom, 1918-1958 :","Za chystotu pozyt︠s︡iĭ ukraïnsʹkoho vyzvolʹnoho rukhu /","Pid znakom tryvoz︠h︡noho maĭbutnʹoho :","Moskovsʹka otruta /"],"1920":["Otchet raboche-krestʹi︠a︡nskogo pravitelʹstva Ukrainy IV-mu Vseukrainskomu S'ezdu [sic] Sovetov Rabochikh, Krestʹi︠a︡nskikh i Krasnoarmeĭskikh Deputatov :"],"2010":["Proekt \"Ukraïna\", abo Tai︠e︡mnyt︠s︡i︠a︡ Mykhaĭla Hrushevsʹkoho /","Ukraïna v zoni turbulentnosti :","Poslanni︠a︡ Prezydenta Ukraïny Viktora I︠A︡nukovycha do Ukraïnsʹkoho narodu z ekspertnoi︠u︡ dopoviddi︠u︡ NISD \"Ukraïna XXI stolitti︠a︡--stratehii︠a︡ reform i suspilʹnoï konsolidat︠s︡iï\" /","100 dniv novoï vlady--i︠a︡ka modelʹ uri︠a︡duvanni︠a︡ formui︠e︡tʹsi︠a︡? /"],"1860":["Tarih-i Kaminçe."]},"antiquities":{"2000":["Les sites archéologiques en Crimée et au Caucase durant l'antiquité tardive et le haut Moyen-Age /","Ot i︠a︡zychestva k khristianstvu :","Hreky na ukraïnsʹkykh terenakh :","IV Dmitrievskie chtenii︠a︡ :"],"1990":["T︠S︡ʹoho vy ne znai︠e︡te! :","Unbekannte Krim :","Archaeological map of Nymphaion (Crimea) /","Ėtnicheskai︠a︡ istorii︠a︡ rannevizantiĭskogo Kryma /"],"1940":["Staryĭ Halych :"],"1910":["Ostrov Bi︠e︡lyĭ i Tavrika na Evksinskom Ponti︠e︡ /","Z pradziejów ziemi lwowskiej /"],"1960":["Kanivsʹke poselenni︠a︡ poli︠a︡n /","Skify Dneprovskogo lesostepnogo Levoberezhʹi︠a︡ :","Doklady, prochitannye na XI Vsesoi︠u︡znoĭ studencheskoĭ arkheologicheskoĭ konferent︠s︡ii 1965 g. v Erevane."],"1720":["Kurgany poli︠a︡n X-XII vv. /","I︠A︡mnai︠a︡ kulʹturno-istoricheskai︠a︡ oblastʹ (i︠u︡zhnobugskiĭ variant) /","Kizil-kobinskai︠a︡ kulʹtura i tavry /","Pozdnie skify v Krymu /"],"1970":["Proshloe Kaneva i ego okrestnosteĭ /","Mynule Kaneva ta ĭoho okolyt︠s︡ʹ /","Ranneskifskie kurgany basseĭna r. Ti︠a︡smin :","Ukraïna na dosvitku istorii."],"1980":["Drevnerusskoe Podnestrovʹe :","Bosporskie goroda :","Lepnai︠a︡ keramika bosporskikh gorodov /","Koroplastika Bospora :"],"1900":["Si︠e︡veri︠a︡nskai︠a︡ zemli︠a︡ i si︠e︡veri︠a︡ne po gorodishcham i mogilam /"],"1830":["O drevnosti︠a︡kh i︠u︡zhnago berega Kryma i gor Tavricheskikh /"],"2010":["The glory of Ukraine :","Ukraïnsʹki svi︠a︡tyni ta symvoly /","Ukraine from Trypillia to Rus /","Kni︠a︡z︠h︡e misto Volodymyr /"],"1860":["Putevyi︠a︡ zami︠e︡tki :"]},"foreign_relations":{"2000":["Ukraine and Russia :","Petlurowcy :","Ukraine :","Political culture and national identity in Russian-Ukrainian relations /"],"1990":["Rosja w polityce niepodległej Ukrainy /","Z istoriï mizhnarodnykh zv'i︠a︡zkiv Ukraïny :","Russia and Ukraine :","Ukraïnsʹka dyplomatii︠a︡ u XX stolitti /"],"1940":["Seredzemne more i Ukraïna /"],"1960":["Fifty years of fraud and oppression;"],"1980":["Ukraine and Poland in documents, 1918-1922 /","Anglo-American perspectives on the Ukrainian question, 1938-1951 :","Progressivnai︠a︡ grecheskai︠a︡ ėmigrat︠s︡ii︠a︡ v Odesse :","Ukraïnsʹka RSR u miz︠h︡narodno-dohovirnykh vidnosynakh :"],"1910":["Ukraïnsʹka derz︠h︡avna dumka i Evropa /"],"2010":["Ukraïna v zoni turbulentnosti :","L'Ukraine, entre intégration et partenariat =","Entwicklungsszenarien in Osteuropa-mit Schwerpunkt Ukraine /","Die Ukraine :"]},"wwii":{"1990":["--Za voli︠u︡ Ukraïny :","Ukraïna v Druhiĭ svitoviĭ i Velykiĭ Vitchyzni︠a︡niĭ viĭnakh, 1939-1945 rr. /","Krymskie repatrianty :","Ukrainian nationalism /"],"1960":["Ukrainian nationalism.","U nastupakh i vidstupakh :","Rozkaz︠h︡u vam pro Kazakhstan :"],"1950":["Orhanizat︠s︡ii︠a︡ ukraïnsʹkykh nat︠s︡ionalistiv pidchas Druhoï Svitovoï viĭny /","Spomyny chotovoho Ostroverkha : khronika Taktychnykh vidtynkiv UPA \"Lemko\" i \"Makivka\", 1944-1948.","Krizʹ smikh zaliza :","Ïdesh, brate miĭ-- :"],"1980":["Ukrainian nationalism /","Truth and myths about UPA /","Odyn rik u Chervoniĭ Armiï :","The restoration of the Ukrainian state in World War II."],"2000":["Promizhnyĭ zvit robochoĭ hrupy dli︠a︡ pidhotovky istorychnoho vysnovku pro dii︠a︡lʹnistʹ OUN-UPA :","Polacy we Lwowie, 1939-1944 :","Střetnutí věků /","I heard my people cry :"],"2010":["Kolyska rodynna /","Trahedii︠a︡ ukraïnsʹko-polʹsʹkoho protystoi︠a︡nni︠a︡ na Volyni 1938-1944 rokiv :","Teorii︠a︡ i praktika zapadnoukrainskogo nat︠s︡ionalizma v dokumentakh NKVD, MVD i MGB SSSR, 1939-1956 :","Świat rzeczywisty-świat zapamiętany :"]},"revolution":{"1990":["Erinnerungen 1917 bis 1918 /","Ukraïnsʹki vyzvolʹni zmahanni︠a︡ 1917-1921 rr. /","Ukraïnsʹka revoli︠u︡t︠s︡ii︠a︡  :","Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :"],"1980":["Mälestused Krimmist /","Statʹi, rechi, pisʹma /","Komandarm Dubovoĭ /","Postupʹ Velikogo Okti︠a︡bri︠a︡ :"],"2000":["Ukraińska idea narodowa okresu międzywojennego :","Odessa 1917 :","Petlurowcy :","Medvyn v ohni istoriï :"],"1920":["Inhuman blockade strangling a nation :","Pro Sichovykh Strilʹt︠s︡iv /"],"1940":["Prychynky do istoriï ukraïnsʹkoï revoli︠u︡tsiï."],"1950":["Za velych natsiï /","Ukraïnsʹka Halyt︠s︡ʹka armii︠a︡ :","Vyzvolʹna borotʹba na zakhidnʹo-ukraïnsʹkykh zemli︠a︡kh u 1918-1923 rokakh /"],"1960":["Pry dz︠h︡erelakh borotʹby :","Vyhnaty okupanta /"],"1970":["Pisni︠a︡ pro chervonu kalynu, 1914-1974.","Nestor Makhno :","Z viĭsʹkovoho hnizda :","U 50-richchi︠a︡ Zymovoho pokhodu armiï UNR ="],"1930":["I︠U︡vileĭna pami︠a︡tka, 1887-1937 :"],"2010":["Otaman Orlyk /","Proekt \"Ukraïna\", abo Krakh Symona Petli︠u︡ry /","Ukraïnsʹka amazonka Oleksandra Sokolovsʹka (otamansha \"Marusi︠a︡\") /","Die Ukraine :"]},"nationalism":{"1990":["Stepan Lenkavsʹkyĭ :","Erinnerungen 1917 bis 1918 /","Bitter truth :","Etnos i nat︠s︡ii︠a︡ :"],"2000":["Ukraińska idea narodowa okresu międzywojennego :","\"Ukrainskiĭ vopros\" v politike vlasteĭ i russkom obshchestvennom mnenii (vtorai︠a︡ polovina XIX v.) /","Litopys UPA--chas, podiï, dz︠h︡erela :","My plekaly viru u vyzvolenni︠a︡ Ukraïny  ;"],"1940":["UPA in Western Europe.","Samostiĭna Ukraïna /","The Ukrainian problem /"],"1950":["Akt vidnovlenni︠a︡ ukraïnsʹkoï derz︠h︡avnosty 30. chervni︠a︡ 1941 roku :","Moscow and the Ukraine, 1918-1953;","Statti, lysty, dokumenty /","Ukraïnsʹkyĭ robitnyĭ li︠u︡d u borotʹbi za nat︠s︡ionalʹnu derz︠h︡avu /"],"1960":["Ukrainian nationalism.","Ukraïnsʹkyĭ nat︠s︡ionalizm.","Heĭ, tam na hori \"Sich\" ide! :","Vybrani pratsi."],"1970":["Ferment in the Ukraine;","Zaborona ukraïnstva tysi︠a︡cha visimsot simdesi︠a︡t shostyĭ r. 1876 p.","Materii︠a︡ly kongresu.","Kyiv versus Moscow;"],"1980":["Ukrainian nationalism /","I︠A︡ka orii︠e︡ntat︠s︡ii︠a︡? /","Memoranda of the Ukrainian National Government in Exile :","The Mazepists :"],"1920":["Zi spomyniv Myroslava Sichynsʹkoho /","Velyka revoli︠u︡t︠s︡ii︠a︡ i ukraïnsʹka vyzvolʹna programa :","Derz︠h︡avni zmahanni︠a︡ Prykarpat︠s︡ʹkoï Ukraïny /"],"1910":["T︠S︡arsʹka Rosii︠a︡ i ukraïnsʹka sprava /","Narodnistʹ i ïï pochatky /","Ukraïnsʹka derz︠h︡avna dumka i Evropa /"],"2010":["Borderlands into bordered lands :","Teorii︠a︡ i praktika zapadnoukrainskogo nat︠s︡ionalizma v dokumentakh NKVD, MVD i MGB SSSR, 1939-1956 :","Die Ukraine :","\"Osobye papky\" Stalina i Molotova pro nat︠s︡ionalʹno-vyzvolʹnu borotʹbu v Zakhidniĭ Ukraïni u 1944-1948 rr. :"]},"famine":{"1990":["Holod 1946-1947 rokiv v Ukraïni--prychyny i naslidky :","Mezhdunarodnai︠a︡ komissii︠a︡ po rassledovanii︠u︡ goloda na Ukraine 1932-1933 godov :","Investigation of the Ukrainian famine, 1932-1933 :","Lettere da Kharkov :"],"2000":["Henot︠s︡yd :","Strashna pravda holodomoru :","Holodomory v Ukraïni 1921-1923, 1932-1933, 1946-1947 :","Holodovka, 1932-1933 roky na Perei︠a︡slavshchyni :"],"1950":["The Golgotha of Ukraine :","Naĭbilʹshyĭ zlochyn Kremli︠a︡ :","V dev'i︠a︡tim kruzi-- /","The ninth circle /"],"1960":["Moskva slʹozam ne virytʹ :","Organized famine in Ukraine, 1932-1933 /","Stalinsʹko-khrushchovsʹke okhvisti︠a︡ /","Orhanizovanyĭ holod v Ukraïni 1932-1933 /"],"1920":["Hunger in der Ukraine /","Holod na Ukraïni :"],"1930":["Lykholitti︠a︡ Ukraïny /","Famine in Ukraine."],"1970":["Memorandum from the World Congress of Free Ukrainians to the General Secretary of United Nations, Hon. Dr Kurt Waldheim.","Ukraïnsʹkyĭ \"Holokost\", 1933 /"],"1980":["The ninth circle :","Holod na Ukraïni i \"tai︠e︡mnycha ruka\" /","The agony of a nation :","50 years ago :"],"2010":["Holodomor, famine in Ukraine, 1932-1933","Uprazhnenii︠a︡ s istorieĭ po-ukrainski /","Golodomor /","Holodomor bibliography :"]}},"themeTotals":{"antiquities":435,"foreign_relations":281,"nationalism":665,"revolution":234,"famine":280,"politics":1010,"wwii":196},"themeTotalsWithYear":{"antiquities":425,"foreign_relations":268,"nationalism":584,"revolution":213,"famine":276,"politics":915,"wwii":164},"totalRecords":7093,"matchedAnyCount":2588,"noPubYCount":207};
+
+const yrMin = DATA.yearMin, yrMax = DATA.yearMax;
+const bands = DATA.bandOrder; // fixed stacking order == the CVD-validated adjacency order
+
+document.getElementById('totalRecordsNum').textContent = DATA.totalRecords.toLocaleString();
+document.getElementById('smoothWindowNum').textContent = DATA.smoothWindow;
+document.getElementById('footerNote').innerHTML =
+  'Built from the same DK508 bibliographic dataset as the companion map and geographic river. ' +
+  'Theme totals (all years, incl. ' + DATA.noPubYCount + ' records with no usable publication year, not shown on the chart): ' +
+  bands.map(b => DATA.bandLabel[b] + ' ' + DATA.themeTotals[b]).join(', ') + '.';
+
+// --- legend ---------------------------------------------------------------
+const legendEl = document.getElementById('legend');
+legendEl.innerHTML = bands.map(b =>
+  '<div class="legend-item"><span class="legend-swatch" style="background:' + DATA.bandColor[b] + '"></span>' +
+  DATA.bandLabel[b] + '</div>'
+).join('');
+
+// --- smoothing: centered moving average, edge-clamped (shorter window at
+// the very start/end of the range rather than padding with zeros, so the
+// curve doesn't fall to 0 right at the axis edges) ---------------------
+function smooth(arr, window) {
+  const half = Math.floor(window / 2);
+  const out = new Array(arr.length);
+  for (let i = 0; i < arr.length; i++) {
+    let lo = Math.max(0, i - half), hi = Math.min(arr.length - 1, i + half);
+    let sum = 0, n = 0;
+    for (let j = lo; j <= hi; j++) { sum += arr[j]; n++; }
+    out[i] = sum / n;
+  }
+  return out;
+}
+
+// --- build per-year stack (smoothed for the flowing shape; raw kept for
+// tooltip/table) -----------------------------------------------------------
+const years = DATA.years;
+const smoothedSeries = {};
+bands.forEach(b => { smoothedSeries[b] = smooth(DATA.series[b], DATA.smoothWindow); });
+const rows = years.map((y, i) => {
+  const row = { year: y };
+  for (const b of bands) row[b] = smoothedSeries[b][i];
+  return row;
+});
+// Fixed order (stackOrderNone, the d3 default for an explicit .keys() array)
+// + wiggle offset -- this is what makes the CVD-validated ADJACENT color
+// pairlist above match the actually-rendered adjacency: an inside-out or
+// other data-dependent reordering would silently invalidate that
+// validation, since which bands end up next to each other would then
+// depend on the data instead of this fixed list.
+const stackGen = d3.stack().keys(bands).offset(d3.stackOffsetWiggle);
+const stacked = stackGen(rows);
+const stackedByKey = {};
+bands.forEach(b => { stackedByKey[b] = stacked.find(s => s.key === b); });
+
+// --- non-linear x "warp" -----------------------------------------------------
+// Same compression technique as the companion geographic river's year axis:
+// almost all seven themes' publication activity falls after 1900 (the
+// pre-1900 stretch is Antiquities alone, thinly), so a linear axis would
+// spend most of its width on a nearly-flat sliver and squeeze the actually
+// eventful 20th-21st century into a corner. Nothing before 1900 is
+// dropped -- it's still on the axis, in the right order and relative
+// spacing -- it's just given less width so the dense modern era is legible.
+function makeYearWarp(yearMin, yearMax, breakYear, breakFrac) {
+  function toFrac(y) {
+    return y <= breakYear
+      ? (y - yearMin) / (breakYear - yearMin) * breakFrac
+      : breakFrac + (y - breakYear) / (yearMax - breakYear) * (1 - breakFrac);
+  }
+  function toYear(f) {
+    return f <= breakFrac
+      ? yearMin + (f / breakFrac) * (breakYear - yearMin)
+      : breakYear + ((f - breakFrac) / (1 - breakFrac)) * (yearMax - breakYear);
+  }
+  return { toFrac, toYear };
+}
+const WARP_BREAK_YEAR = 1900, WARP_BREAK_FRAC = 0.16;
+const yearWarp = makeYearWarp(yrMin, yrMax, WARP_BREAK_YEAR, WARP_BREAK_FRAC);
+
+// --- dimensions -------------------------------------------------------------
+const margin = { top: 34, right: 200, bottom: 46, left: 20 };
+let width = 1124, height = 460;
+const svg = d3.select('#chart');
+
+function render() {
+  const wrap = document.getElementById('chartWrap');
+  width = Math.max(600, wrap.clientWidth);
+  height = 460;
+  svg.attr('viewBox', [0, 0, width, height]).attr('width', '100%').attr('height', height);
+  svg.selectAll('*').remove();
+
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+  const g = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+  // Minimal custom "scale" (plain function with the members d3-axis needs)
+  // so the axis, area generator, and hover-lookup all warp together.
+  const x = (year) => yearWarp.toFrac(year) * innerW;
+  x.range = () => [0, innerW];
+  x.copy = () => x;
+  x.invert = (px) => yearWarp.toYear(px / innerW);
+
+  let yMin = 0, yMax = 0;
+  stacked.forEach(s => s.forEach(d => { yMin = Math.min(yMin, d[0], d[1]); yMax = Math.max(yMax, d[0], d[1]); }));
+  const pad = (yMax - yMin) * 0.08;
+  const y = d3.scaleLinear().domain([yMin - pad, yMax + pad]).range([innerH, 0]);
+
+  // vertical gridlines/ticks -- sparse before the warp's break year (that
+  // stretch is compressed and nearly dataless), denser after it (where the
+  // actual story is) -- recessive, matching the reference streamgraph's
+  // subtle vertical rules. Plain integer format throughout: d3's default
+  // number formatting would otherwise group years as "1,900".
+  const gridYears = d3.scaleLinear().domain([yrMin, WARP_BREAK_YEAR]).ticks(4)
+    .concat(d3.scaleLinear().domain([WARP_BREAK_YEAR, yrMax]).ticks(9))
+    .filter((d, i, arr) => arr.indexOf(d) === i && d >= yrMin && d <= yrMax);
+  g.append('g').selectAll('line').data(gridYears).join('line')
+    .attr('class', 'gridline')
+    .attr('x1', d => x(d)).attr('x2', d => x(d)).attr('y1', 0).attr('y2', innerH);
+
+  // x axis
+  const xAxis = d3.axisBottom(x).tickValues(gridYears).tickFormat(d => String(d)).tickSize(0).tickPadding(10);
+  g.append('g').attr('class', 'axis').attr('transform', 'translate(0,' + innerH + ')').call(xAxis);
+  g.selectAll('.axis .domain').remove();
+
+  // mark the compression point itself, same honesty rule the companion
+  // river uses: a non-linear axis must say so where it happens.
+  const breakX = x(WARP_BREAK_YEAR);
+  g.append('line')
+    .attr('x1', breakX).attr('x2', breakX).attr('y1', 0).attr('y2', innerH)
+    .attr('stroke', 'var(--text-muted)').attr('stroke-width', 1).attr('stroke-dasharray', '1,3').attr('opacity', 0.5);
+  g.append('text')
+    .attr('x', breakX + 5).attr('y', innerH + 40)
+    .attr('fill', 'var(--text-muted)').attr('font-size', 9.5).attr('font-style', 'italic')
+    .text('years before ' + WARP_BREAK_YEAR + ' compressed ← | → expanded');
+
+  // area generator -- a gentle basis curve is what gives the reference
+  // image's organic, amoeba-like flow (monotoneX, used elsewhere in this
+  // project, stays too close to the raw polyline for that look; basis
+  // pulls the curve fully off its control points, which is fine here
+  // since the 5-year smoothing already did the job of respecting the
+  // real data shape -- basis is purely a rendering choice on top of it).
+  const area = d3.area()
+    .x(d => x(d.data.year))
+    .y0(d => y(d[0]))
+    .y1(d => y(d[1]))
+    .curve(d3.curveBasis);
+
+  const areasG = g.append('g');
+  areasG.selectAll('path').data(stacked).join('path')
+    .attr('class', 'area-band')
+    .attr('fill', d => DATA.bandColor[d.key])
+    .attr('fill-opacity', 0.88)
+    .attr('d', area);
+
+  // dotted "pre-data" lead-in: a thin dashed zero-line from the axis start
+  // out to the first year ANY band has a nonzero raw value, matching the
+  // reference image's convention for "this entity exists on the timeline,
+  // but has no measurable data yet" rather than just leaving blank space.
+  let firstDataYear = yrMax;
+  outer:
+  for (let i = 0; i < years.length; i++) {
+    for (const b of bands) { if (DATA.series[b][i] > 0) { firstDataYear = years[i]; break outer; } }
+  }
+  if (firstDataYear > yrMin) {
+    // Not y(0): under a wiggle offset the "zero" baseline isn't flat at 0,
+    // it's wherever d3 placed the (all-zero, so still flat) stack at the
+    // very first x position -- read that back from the stack itself
+    // rather than assuming where it is.
+    const zeroY = y(stacked[0][0][0]);
+    g.append('line')
+      .attr('class', 'pre-data-line')
+      .attr('x1', x(yrMin)).attr('x2', x(firstDataYear))
+      .attr('y1', zeroY).attr('y2', zeroY);
+  }
+
+  // direct labels at the right edge, one per band, vertically centered on
+  // that series' own position at the last year -- nudged apart on
+  // collision (thin bands can end close together).
+  const labelG = g.append('g');
+  const labelPositions = bands.map(b => {
+    const s = stackedByKey[b];
+    const last = s[s.length - 1];
+    return { b, midY: (y(last[0]) + y(last[1])) / 2 };
+  });
+  labelPositions.sort((a, c) => a.midY - c.midY);
+  const MIN_LABEL_GAP = 14;
+  for (let i = 1; i < labelPositions.length; i++) {
+    if (labelPositions[i].midY - labelPositions[i - 1].midY < MIN_LABEL_GAP) {
+      labelPositions[i].midY = labelPositions[i - 1].midY + MIN_LABEL_GAP;
+    }
+  }
+  // Shortened forms for the on-chart direct labels only -- the legend
+  // below (and the tooltip) already show the full name at a width that
+  // comfortably fits it; the chart's own right margin doesn't.
+  const SHORT_LABEL = {
+    nationalism: 'Nationalism & indep.',
+    wwii: 'World War II',
+    revolution: 'Revolution & Civil War',
+  };
+  labelPositions.forEach(({ b, midY }) => {
+    labelG.append('text')
+      .attr('class', 'band-label')
+      .attr('x', innerW + 8)
+      .attr('y', midY)
+      .attr('dy', '0.32em')
+      .attr('fill', DATA.bandColor[b])
+      .text(SHORT_LABEL[b] || DATA.bandLabel[b]);
+  });
+
+  // --- hover crosshair + tooltip -------------------------------------------
+  const crosshair = g.append('line').attr('class', 'crosshair').attr('y1', 0).attr('y2', innerH);
+  const hoverDots = g.append('g').selectAll('circle').data(bands).join('circle')
+    .attr('class', 'hover-dot').attr('r', 4).attr('fill', d => DATA.bandColor[d]);
+
+  const overlay = g.append('rect')
+    .attr('width', innerW).attr('height', innerH)
+    .attr('fill', 'transparent')
+    .style('cursor', 'crosshair')
+    .on('mousemove', onMove)
+    .on('mouseleave', () => { hideTooltip(); crosshair.style('opacity', 0); hoverDots.style('opacity', 0); });
+
+  function onMove(event) {
+    const [mx] = d3.pointer(event);
+    const yearAtX = Math.round(x.invert(mx));
+    const idx = Math.min(years.length - 1, Math.max(0, yearAtX - yrMin));
+    const yr = years[idx];
+    crosshair.attr('x1', x(yr)).attr('x2', x(yr)).style('opacity', 0.6);
+    hoverDots.style('opacity', 1).attr('cx', x(yr)).attr('cy', b => {
+      const s = stackedByKey[b][idx];
+      return y(s[1]);
+    });
+    showYearTooltip(event, yr, idx);
+  }
+
+  function showYearTooltip(event, yr, idx) {
+    const decadeKey = String(Math.floor(yr / 10) * 10);
+    let html = '<div class="year">' + yr + '</div>';
+    bands.forEach(b => {
+      const raw = DATA.series[b][idx];
+      html += '<div class="row"><span class="swatch" style="background:' + DATA.bandColor[b] + '"></span>' +
+        DATA.bandLabel[b] + ': <b style="margin-left:auto">' + raw + '</b></div>';
+    });
+    const titleBlocks = [];
+    bands.forEach(b => {
+      const titles = (DATA.decadeTitles[b] && DATA.decadeTitles[b][decadeKey]) || [];
+      if (titles.length) titleBlocks.push({ label: DATA.bandLabel[b], color: DATA.bandColor[b], title: titles[0] });
+    });
+    if (titleBlocks.length) {
+      html += '<div class="titles-head">Example titles, ' + decadeKey + 's:</div>';
+      titleBlocks.forEach(tb => {
+        html += '<div class="title-row"><span class="swatch" style="background:' + tb.color + '"></span>' +
+          '<span><b>' + tb.label + ':</b> &ldquo;' + escapeHtml(tb.title) + '&rdquo;</span></div>';
+      });
+    }
+    tooltipEl.innerHTML = html;
+    tooltipEl.style.opacity = 1;
+    positionTooltip(event);
+  }
+}
+
+const tooltipEl = document.getElementById('tooltip');
+function positionTooltip(event) {
+  const wrap = document.getElementById('chartWrap');
+  const rect = wrap.getBoundingClientRect();
+  let left = event.clientX - rect.left + 16;
+  let top = event.clientY - rect.top - 10;
+  if (left + 300 > rect.width) left = event.clientX - rect.left - 316;
+  tooltipEl.style.left = left + 'px';
+  tooltipEl.style.top = Math.max(0, top) + 'px';
+}
+function hideTooltip() { tooltipEl.style.opacity = 0; }
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+render();
+window.addEventListener('resize', () => {
+  if (document.getElementById('tableView').style.display !== 'none') return;
+  render();
+});
+
+// --- table view (accessibility fallback) ------------------------------------
+function buildTable() {
+  document.getElementById('tableHead').innerHTML =
+    '<th>Decade</th>' + bands.map(b => '<th>' + DATA.bandLabel[b] + '</th>').join('');
+  const byDecade = new Map();
+  years.forEach((yr, i) => {
+    const dk = Math.floor(yr / 10) * 10;
+    let acc = byDecade.get(dk);
+    if (!acc) { acc = {}; bands.forEach(b => acc[b] = 0); byDecade.set(dk, acc); }
+    bands.forEach(b => { acc[b] += DATA.series[b][i]; });
+  });
+  const rowsHtml = Array.from(byDecade.entries()).map(([dk, acc]) =>
+    '<tr><td>' + dk + 's</td>' + bands.map(b => '<td>' + acc[b] + '</td>').join('') + '</tr>'
+  ).join('');
+  document.getElementById('tableBody').innerHTML = rowsHtml;
+}
+
+document.getElementById('btnChartView').addEventListener('click', () => {
+  document.getElementById('btnChartView').classList.add('active');
+  document.getElementById('btnTableView').classList.remove('active');
+  document.getElementById('chartWrap').style.display = 'block';
+  document.getElementById('legend').style.display = 'flex';
+  document.getElementById('tableView').style.display = 'none';
+  render();
+});
+document.getElementById('btnTableView').addEventListener('click', () => {
+  document.getElementById('btnTableView').classList.add('active');
+  document.getElementById('btnChartView').classList.remove('active');
+  document.getElementById('chartWrap').style.display = 'none';
+  document.getElementById('legend').style.display = 'none';
+  document.getElementById('tableView').style.display = 'block';
+  buildTable();
+});
+</script>
+</body>
+</html>

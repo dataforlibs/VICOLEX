@@ -19,6 +19,7 @@
     --pub:            #8bd17c;
     --russia:         #e66767;
     --poland:         #3987e5;
+    --topics:         #d95926;
     --other:          #199e70;
     --ukraine:        #eda100;
   }
@@ -74,7 +75,8 @@
   #hero h1 { font-size: 34px; line-height: 1.18; margin: 0 0 14px 0; letter-spacing: -0.02em; max-width: 760px; }
   #hero h1 em { font-style: normal; color: var(--about); }
   #hero p.lede { max-width: 680px; margin-bottom: 26px; }
-  .hero-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+  .hero-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 8px; }
+  @media (max-width: 1000px) { .hero-cards { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 720px) { .hero-cards { grid-template-columns: 1fr; } }
   .tool-card {
     display: block; text-decoration: none; border: 1px solid var(--gridline);
@@ -88,6 +90,7 @@
   .tool-card .cta { font-size: 12.5px; color: var(--about); font-weight: 600; }
   .tool-card.map { border-left: 3px solid var(--about); }
   .tool-card.river { border-left: 3px solid var(--russia); }
+  .tool-card.topics { border-left: 3px solid var(--topics); }
 
   /* ---- stat strip -------------------------------------------------------*/
   .stat-strip {
@@ -166,6 +169,7 @@
   <div class="tools">
     <a class="pill-link" href="dk508_temporal_map.html">🗺️ Map &amp; network</a>
     <a class="pill-link" href="dk508_influence_river.html">📈 Influence river</a>
+    <a class="pill-link" href="dk508_topics_river.html">📊 Subject themes</a>
   </div>
 </div>
 
@@ -173,7 +177,7 @@
 
   <section id="hero">
     <h1>What a library catalog can tell you about <em>Ukraine's</em> local history — and everyone else's part in it</h1>
-    <p class="lede">Two interactive visualizations built from the Library of Congress's DK508 classification —
+    <p class="lede">Three interactive visualizations built from the Library of Congress's DK508 classification —
       "Ukraine — History." Not a textbook, and not a claim about who owns what: a way to see the patterns
       already sitting inside 7,093 catalog records, and to click through to the actual books behind every
       pattern.</p>
@@ -193,6 +197,14 @@
         <p>A year-by-year chart of how often the catalog's own subject headings tie Ukraine's history to
           Russia, Poland, and other neighboring powers — next to Ukraine's own continuous historical
           throughline, back to 650 BC.</p>
+        <span class="cta">Open the chart →</span>
+      </a>
+      <a class="tool-card topics" href="dk508_topics_river.html">
+        <span class="icon">📊</span>
+        <h3>Subject Themes River</h3>
+        <p>A streamgraph of seven non-geographic themes — Politics and government, Famine, Nationalism,
+          Revolution, World War II, and more — tracking when the catalog's own books ABOUT each one were
+          published, not when the events themselves happened.</p>
         <span class="cta">Open the chart →</span>
       </a>
     </div>
@@ -504,8 +516,9 @@
     <div class="tools">
       <a class="pill-link" href="dk508_temporal_map.html">🗺️ Open the Map &amp; Network Explorer</a>
       <a class="pill-link" href="dk508_influence_river.html">📈 Open the Influence River chart</a>
+      <a class="pill-link" href="dk508_topics_river.html">📊 Open the Subject Themes River</a>
     </div>
-    <p class="muted">Keep this page and both tools saved in the same folder so the links between them resolve.</p>
+    <p class="muted">Keep this page and all three tools saved in the same folder so the links between them resolve.</p>
   </footer>
 
 </main>
