@@ -353,7 +353,11 @@ const headSel = gHead.selectAll('circle.head-dot')
   .join('circle')
   .attr('class','head-dot')
   .attr('r', 2.1)
-  .style('display','none');
+  .style('display','none')
+  .style('pointer-events','all')
+  .on('mousemove', (ev,d)=> showTooltip(ev,d))
+  .on('mouseleave', hideTooltip)
+  .on('click', (ev,d)=> { if(!selectMode) selectPerson(d.id); });
 
 function render(){
   const y = currentYear;
@@ -407,12 +411,15 @@ function render(){
   });
 
   gDots.selectAll('circle.wp-dot')
-    .data(PEOPLE.flatMap(d=>d.w.filter(w=>w.sx!=null && w.y<=y).map(w=>({...w, pid:d.id}))))
+    .data(PEOPLE.flatMap(d=>d.w.filter(w=>w.sx!=null && w.y<=y).map(w=>({...w, pid:d.id, pname:d.n}))))
     .join('circle')
     .attr('class','wp-dot')
     .attr('r', d=> durRadius(d.dur==null ? 2 : d.dur))
     .attr('cx', d=>d.sx).attr('cy', d=>d.sy)
-    .attr('fill', d=>d.color);
+    .attr('fill', d=>d.color)
+    .on('mousemove', (ev,d)=> showNodeTooltip(ev,d))
+    .on('mouseleave', hideTooltip)
+    .on('click', (ev,d)=> { if(!selectMode) selectPerson(d.pid); });
 
   applyHighlight();
   updateAreaListNowState();
@@ -584,6 +591,17 @@ function showTooltip(ev,d){
   const durTxt = last.dur ? ` · stayed ~${Math.round(last.dur)} yr${Math.round(last.dur)===1?'':'s'}` : '';
   tooltip.innerHTML = `<b>${d.n}</b><br>${d.by||'?'}–${d.dy||'?'}<br>
     <span class="place" style="color:${last.color}">${last.p}</span>${last.k? '' : ' <i>(estimated)</i>'} · ${Math.round(last.y)}${durTxt}`;
+}
+// hovering a single waypoint dot: show exactly what that stop was, rather
+// than the whole-path summary showTooltip gives for hovering a path segment
+const PREC_LABEL = {c:'city', r:'region', n:'country'};
+function showNodeTooltip(ev,d){
+  tooltip.style.display='block';
+  tooltip.style.left = (ev.clientX+14)+'px';
+  tooltip.style.top = (ev.clientY+10)+'px';
+  const durTxt = d.dur ? ` · stayed ~${Math.round(d.dur)} yr${Math.round(d.dur)===1?'':'s'}` : '';
+  const precTxt = d.pr && d.pr!=='c' ? ` <i>(${PREC_LABEL[d.pr]||'approx.'}-level)</i>` : '';
+  tooltip.innerHTML = `<span class="place" style="color:${d.color}">${d.p}</span>${precTxt}${d.k?'':' <i>(estimated year)</i>'} · ${Math.round(d.y)}${durTxt}<br><b>${d.pname}</b>`;
 }
 function hideTooltip(){ tooltip.style.display='none'; }
 
