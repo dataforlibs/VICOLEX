@@ -14,9 +14,16 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     height:100%;overflow:hidden}
   #app{position:relative;width:100vw;height:100vh}
-  svg{width:100%;height:100%;display:block;background:radial-gradient(ellipse at 50% 40%, #0e1b2c 0%, #070d16 100%)}
-  .land{fill:var(--land);stroke:var(--land-stroke);stroke-width:0.7}
-  .graticule{fill:none;stroke:#1a2a3f;stroke-width:0.4}
+  svg{width:100%;height:100%;display:block;background:radial-gradient(ellipse at 50% 40%, #0e1b2c 0%, #070d16 100%);cursor:grab}
+  svg:active{cursor:grabbing}
+  .land{fill:var(--land);stroke:var(--land-stroke);stroke-width:0.7;vector-effect:non-scaling-stroke}
+  .country-label{fill:#9fb6d2;opacity:.68;text-anchor:middle;pointer-events:none;
+    font-family:inherit;letter-spacing:.2px;paint-order:stroke;stroke:#0b1420;stroke-width:2.5px;stroke-linejoin:round}
+  .graticule{fill:none;stroke:#1a2a3f;stroke-width:0.4;vector-effect:non-scaling-stroke}
+  #zoomControls{position:absolute;right:18px;bottom:100px;z-index:6;display:flex;flex-direction:column;gap:6px}
+  #zoomControls button{width:32px;height:32px;padding:0;font-size:16px;line-height:1;
+    border-radius:8px;background:rgba(15,28,46,0.88);border:1px solid var(--line);color:var(--ink)}
+  #zoomControls button:hover{border-color:var(--accent2)}
 
   #topbar{position:absolute;top:0;left:0;right:0;padding:14px 18px 10px;
     background:linear-gradient(to bottom, rgba(7,13,22,0.92), rgba(7,13,22,0));
@@ -45,14 +52,15 @@
   #speed{width:70px}
   #stats{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
 
-  .path-line{fill:none;stroke:var(--accent2);stroke-width:1.1;opacity:.55;
-    stroke-linejoin:round;stroke-linecap:round}
-  .path-line.dim{opacity:.06}
-  .path-line.hi{stroke:var(--accent);stroke-width:2.2;opacity:1}
-  .wp-dot{fill:var(--accent2);stroke:#04101c;stroke-width:.6}
-  .wp-dot.dim{opacity:.1}
-  .wp-dot.hi{fill:var(--accent)}
-  .head-dot{fill:#fff;stroke:var(--accent);stroke-width:1.4}
+  /* stroke/fill colors for segments & dots are set per-element via attr()
+     (life-stage gradient) — CSS only controls width/opacity/highlight state */
+  .path-seg{fill:none;opacity:.6;stroke-width:1.1;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  .path-seg.dim{opacity:.05}
+  .path-seg.hi{stroke-width:2.6;opacity:1;filter:drop-shadow(0 0 2px rgba(255,255,255,.55))}
+  .wp-dot{stroke:#04101c;stroke-width:.6;vector-effect:non-scaling-stroke}
+  .wp-dot.dim{opacity:.12}
+  .wp-dot.hi{stroke:#fff;stroke-width:1.6}
+  .head-dot{fill:#fff;stroke:var(--accent);stroke-width:1.4;vector-effect:non-scaling-stroke}
 
   #tooltip{position:absolute;pointer-events:none;z-index:20;
     background:rgba(10,18,30,.96);border:1px solid var(--line);border-radius:8px;
@@ -73,17 +81,42 @@
     display:flex;flex-direction:column;gap:4px}
   #legend .lg{display:flex;align-items:center;gap:6px}
   #legend .sw{width:10px;height:10px;border-radius:50%;display:inline-block}
-  #detail{position:absolute;left:18px;top:56px;z-index:7;width:290px;
+  #detail{position:absolute;left:18px;top:56px;z-index:9;width:290px;
     background:rgba(15,28,46,0.95);border:1px solid var(--accent);border-radius:12px;
     padding:12px 14px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
   #detail h3{margin:0 0 2px;font-size:14px;color:var(--accent)}
   #detail .meta{font-size:11px;color:var(--muted);margin-bottom:8px}
   #detail .route{font-size:12px;line-height:1.7;max-height:32vh;overflow-y:auto}
-  #detail .route .step{padding:2px 0}
-  #detail .route .step.cur{color:var(--accent);font-weight:700}
-  #detail .route .yr{color:var(--muted);font-variant-numeric:tabular-nums}
-  #detail .route .dur{color:var(--accent2);font-size:11px}
+  #detail .route .step{padding:2px 0;display:flex;align-items:baseline;gap:6px;opacity:.4}
+  #detail .route .step.cur{opacity:1;font-weight:700}
+  #detail .route .dot{width:8px;height:8px;border-radius:50%;flex:none;margin-bottom:1px}
+  #detail .route .yr{color:var(--muted);font-variant-numeric:tabular-nums;font-weight:400}
+  #detail .route .dur{color:var(--accent2);font-size:11px;font-weight:400}
   #detail button.close{position:absolute;top:8px;right:8px;padding:2px 7px;font-size:11px}
+
+  #selectBtn.active{background:var(--accent2);color:#04101c;border-color:var(--accent2)}
+  svg.select-mode{cursor:crosshair}
+  .sel-rect{fill:var(--accent2);fill-opacity:.12;stroke:var(--accent2);stroke-width:1.4;
+    stroke-dasharray:5,4;vector-effect:non-scaling-stroke}
+
+  #areaHint{position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:6;
+    background:rgba(15,28,46,0.92);border:1px solid var(--accent2);border-radius:8px;
+    padding:6px 14px;font-size:12px;color:var(--accent2);display:none;pointer-events:none}
+
+  #areaPanel{position:absolute;left:18px;top:56px;z-index:7;width:310px;
+    background:rgba(15,28,46,0.96);border:1px solid var(--accent2);border-radius:12px;
+    padding:12px 14px;display:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #areaPanel h3{margin:0 0 2px;font-size:14px;color:var(--accent2)}
+  #areaPanel .meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+  #areaPanel .area-list{font-size:12px;max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+  #areaPanel .a-row{padding:5px 6px;border-radius:6px;cursor:pointer;opacity:.55}
+  #areaPanel .a-row:hover{background:rgba(94,200,255,0.12)}
+  #areaPanel .a-row.now{opacity:1;background:rgba(94,200,255,0.1)}
+  #areaPanel .a-row .a-name{font-weight:600}
+  #areaPanel .a-row .a-when{color:var(--accent2);font-variant-numeric:tabular-nums;font-size:11px}
+  #areaPanel .a-row .a-place{color:var(--muted);font-size:11px}
+  #areaPanel .empty{color:var(--muted);padding:8px 4px}
+  #areaPanel button.close{position:absolute;top:8px;right:8px;padding:2px 7px;font-size:11px}
 </style>
 </head>
 <body>
@@ -92,13 +125,13 @@
 
   <div id="topbar">
     <h1>Lifepaths of fond creators — Archival Ukrainica in Canada</h1>
-    <div class="sub">Approximate migration paths reconstructed from 324 archival biographies · watch the diaspora spread across the map, decade by decade</div>
+    <div class="sub">Approximate migration paths reconstructed from 324 archival biographies · watch the diaspora spread across the map, decade by decade · scroll or drag to zoom in</div>
   </div>
 
   <div id="legend">
-    <div class="lg"><span class="sw" style="background:var(--accent2)"></span> path travelled so far</div>
+    <div class="lg"><span class="sw" style="background:linear-gradient(90deg,#ffd166,#6a6fd8);width:26px;border-radius:5px"></span> birth (gold) → later life (indigo)</div>
     <div class="lg"><span class="sw" style="background:#fff;border:1.4px solid var(--accent)"></span> current position</div>
-    <div class="lg"><span class="sw" style="background:var(--accent)"></span> selected person</div>
+    <div class="lg"><span class="sw" style="background:#9aa;box-shadow:0 0 0 1.6px #fff inset"></span> selected person (outlined)</div>
     <div class="lg"><span class="sw" style="background:var(--accent2);width:14px;height:14px"></span> bigger dot = longer stay there</div>
   </div>
 
@@ -114,7 +147,22 @@
     <div class="route" id="detailRoute"></div>
   </div>
 
+  <div id="areaPanel">
+    <button class="close" id="areaClose">✕</button>
+    <h3>Who was in this area</h3>
+    <div class="meta" id="areaMeta"></div>
+    <div class="area-list" id="areaList"></div>
+  </div>
+
+  <div id="areaHint">Drag on the map to draw a selection</div>
+
   <div id="tooltip"></div>
+
+  <div id="zoomControls">
+    <button id="zoomIn" title="Zoom in">+</button>
+    <button id="zoomOut" title="Zoom out">−</button>
+    <button id="zoomReset" title="Reset view">⤾</button>
+  </div>
 
   <div id="controls">
     <div class="row">
@@ -123,6 +171,7 @@
       <span id="yearLabel">—</span>
       <input id="yearSlider" type="range" min="1850" max="2015" value="1850" step="1">
       <label class="small">Speed <input id="speed" type="range" min="1" max="12" value="4"></label>
+      <button id="selectBtn" title="Draw a rectangle to see who was ever in that area">▭ Select area</button>
       <div id="stats">—</div>
     </div>
   </div>
@@ -139,11 +188,14 @@ const width = () => document.getElementById('app').clientWidth;
 const height = () => document.getElementById('app').clientHeight;
 
 const svg = d3.select('#map');
-const gMap = svg.append('g').attr('class','map-layer');
-const gGrat = svg.append('g');
-const gPaths = svg.append('g').attr('class','paths-layer');
-const gDots = svg.append('g').attr('class','dots-layer');
-const gHead = svg.append('g').attr('class','heads-layer');
+const gZoom = svg.append('g').attr('class','zoom-root');   // receives the pan/zoom transform
+const gMap = gZoom.append('g').attr('class','map-layer');
+const gLabels = gZoom.append('g').attr('class','labels-layer');
+const gGrat = gZoom.append('g');
+const gPaths = gZoom.append('g').attr('class','paths-layer');
+const gDots = gZoom.append('g').attr('class','dots-layer');
+const gHead = gZoom.append('g').attr('class','heads-layer');
+const gSel = gZoom.append('g').attr('class','sel-layer');   // rectangle-selection overlay, on top, zooms with the map
 
 const projection = d3.geoNaturalEarth1();
 const path = d3.geoPath(projection);
@@ -156,6 +208,21 @@ function fitProjection(){
 }
 fitProjection();
 
+let selectMode = false;   // true while the "Select area" tool is armed
+
+const zoom = d3.zoom()
+  .scaleExtent([1, 16])
+  .filter((event)=> !selectMode)   // pan/wheel/dblclick zoom are suspended while drawing a selection
+  .on('zoom', (event)=>{ gZoom.attr('transform', event.transform); updateLabelVisibility(event.transform.k); });
+svg.call(zoom).on('dblclick.zoom', null);   // dblclick reserved for nothing special; wheel+drag still zoom/pan
+// NOTE: the initial `svg.call(zoom.transform, d3.zoomIdentity)` call is issued
+// further down, after the country labels exist — setting a zoom transform
+// dispatches a synchronous 'zoom' event, and that handler touches labelSel.
+
+document.getElementById('zoomIn').onclick = ()=> svg.transition().duration(200).call(zoom.scaleBy, 1.6);
+document.getElementById('zoomOut').onclick = ()=> svg.transition().duration(200).call(zoom.scaleBy, 1/1.6);
+document.getElementById('zoomReset').onclick = ()=> svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+
 gMap.selectAll('path.land')
   .data(WORLD.features)
   .join('path')
@@ -165,17 +232,57 @@ gMap.selectAll('path.land')
 const graticule = d3.geoGraticule().step([20,20]);
 gGrat.append('path').attr('class','graticule').attr('d', path(graticule()));
 
+// ---------- country name labels ----------
+// Placed at each country's projected centroid; sized off its rendered area,
+// and both size AND which labels are visible are recomputed on every zoom
+// tick — otherwise small countries either clutter the zoomed-out view or
+// stay invisibly tiny once you zoom in on them.
+const countryLabels = WORLD.features.map(f=>{
+  const c = path.centroid(f);
+  return { feature:f, name: f.properties.name, cx: c[0], cy: c[1], area: path.area(f) };
+}).filter(d => d.area > 4 && isFinite(d.cx) && isFinite(d.cy));
+
+const labelSel = gLabels.selectAll('text.country-label')
+  .data(countryLabels)
+  .join('text')
+  .attr('class','country-label')
+  .attr('x', d=>d.cx).attr('y', d=>d.cy)
+  .style('font-size', d=> Math.max(7, Math.min(15, Math.sqrt(d.area)/9)) + 'px')
+  .text(d=>d.name);
+
+function updateLabelVisibility(k){
+  // on-screen area scales with k²; only show a label once its country
+  // would render big enough at the current zoom to be worth reading, and
+  // counter-scale the text itself so it doesn't balloon at high zoom
+  labelSel
+    .style('display', d => (d.area*k*k > 900) ? null : 'none')
+    .attr('transform', d => `translate(${d.cx},${d.cy}) scale(${1/k}) translate(${-d.cx},${-d.cy})`);
+}
+updateLabelVisibility(1);
+svg.call(zoom.transform, d3.zoomIdentity);   // now safe: labels exist, so the synchronous 'zoom' event this fires won't error
+
 // ---------- precompute screen coordinates for each waypoint ----------
 // IMPORTANT: waypoint's time value lives in `w.y` (year) — never reuse that
 // key for the projected pixel position, or every time comparison silently
 // breaks. Screen coords live in `w.sx` / `w.sy` instead.
+// life-stage color: gold at birth -> indigo by end of life, interpolated in
+// HCL (perceptually smoother than RGB, avoids a muddy grey midpoint)
+const lifeColor = d3.interpolateHcl('#ffd166', '#6a6fd8');
 PEOPLE.forEach(p=>{
+  const by = p.by, dy = p.dy;
   p.w.forEach((w,i)=>{
     const c = projection([w.lo, w.la]); w.sx = c ? c[0] : null; w.sy = c ? c[1] : null;
     // dwell time at this place = years until the *next* waypoint (open-ended
     // for the last one, so it doesn't get penalized for "only" 0 duration)
     const nxt = p.w[i+1];
     w.dur = nxt ? Math.max(0, nxt.y - w.y) : null;
+    // fraction of life elapsed at this waypoint, for the birth->death gradient;
+    // falls back to position-in-path when birth/death years aren't both known
+    let t;
+    if(by!=null && dy!=null && dy>by){ t = (w.y - by) / (dy - by); }
+    else { t = p.w.length>1 ? i/(p.w.length-1) : 0; }
+    w.t = Math.max(0, Math.min(1, t));
+    w.color = lifeColor(w.t);
   });
 });
 const durRadius = d3.scaleSqrt().domain([0,40]).range([1.3,7]).clamp(true);
@@ -194,8 +301,32 @@ const speedInput = document.getElementById('speed');
 const statsEl = document.getElementById('stats');
 const tooltip = document.getElementById('tooltip');
 
-// screen-space position of a person's path at a given year, by linear
-// interpolation between the two surrounding (already time-sorted) waypoints
+// ---- arc geometry: each waypoint-to-waypoint hop is drawn as a gentle
+// quadratic-bezier arc (flight-path style) instead of a straight line ----
+function arcControlPoint(ax,ay,bx,by){
+  const dx = bx-ax, dy = by-ay;
+  const dist = Math.sqrt(dx*dx+dy*dy) || 1;
+  const mx = (ax+bx)/2, my = (ay+by)/2;
+  const px = -dy/dist, py = dx/dist;           // unit perpendicular — same rotation
+  const bulge = Math.min(dist*0.15, 80);        // every arc every time, so the whole map reads as one consistent flow
+  return [mx + px*bulge, my + py*bulge];
+}
+function quadPoint(P0,P1,P2,t){
+  const mt = 1-t;
+  return [mt*mt*P0[0]+2*mt*t*P1[0]+t*t*P2[0], mt*mt*P0[1]+2*mt*t*P1[1]+t*t*P2[1]];
+}
+// De Casteljau subdivision — control points of the partial curve from 0..t,
+// so a "half-drawn" arc during the reveal animation is still a true arc,
+// not a straight-line cheat partway through
+function truncatedQuad(P0,P1,P2,t){
+  const Q1 = [P0[0]+(P1[0]-P0[0])*t, P0[1]+(P1[1]-P0[1])*t];
+  const R1 = [P1[0]+(P2[0]-P1[0])*t, P1[1]+(P2[1]-P1[1])*t];
+  const Q2 = [Q1[0]+(R1[0]-Q1[0])*t, Q1[1]+(R1[1]-Q1[1])*t];
+  return [P0, Q1, Q2];
+}
+
+// screen-space position of a person's path at a given year — walks the same
+// arcs the path is drawn with, so the head-dot rides ON the curve, not through it
 function screenPosAtYear(wps, year){
   if(year <= wps[0].y) return [wps[0].sx, wps[0].sy];
   const last = wps[wps.length-1];
@@ -204,24 +335,19 @@ function screenPosAtYear(wps, year){
     const a=wps[i], b=wps[i+1];
     if(year>=a.y && year<=b.y && a.sx!=null && b.sx!=null){
       const t = b.y===a.y ? 1 : (year-a.y)/(b.y-a.y);
-      return [a.sx+(b.sx-a.sx)*t, a.sy+(b.sy-a.sy)*t];
+      const P0=[a.sx,a.sy], P2=[b.sx,b.sy], P1=arcControlPoint(a.sx,a.sy,b.sx,b.sy);
+      return quadPoint(P0,P1,P2,t);
     }
   }
   return [last.sx, last.sy];
 }
 
-const lineGen = d3.line().x(d=>d.sx).y(d=>d.sy).curve(d3.curveCatmullRom.alpha(0.6));
-
-// build one path element + one head dot per person (up front), update visibility each frame
-const pathSel = gPaths.selectAll('path.path-line')
-  .data(PEOPLE, d=>d.id)
-  .join('path')
-  .attr('class','path-line')
-  .attr('data-id', d=>d.id)
-  .on('mousemove', (ev,d)=> showTooltip(ev,d))
-  .on('mouseleave', hideTooltip)
-  .on('click', (ev,d)=> selectPerson(d.id));
-
+// Each person's path is drawn as a chain of straight <line> segments rather
+// than one multi-point <path>, because each segment gets its OWN stroke
+// color (interpolated between its two endpoints' life-stage colors) — SVG
+// has no per-vertex-colored polyline, so per-segment lines are the simplest
+// way to fake a smooth gradient trail while staying in sync with the
+// year-by-year reveal animation.
 const headSel = gHead.selectAll('circle.head-dot')
   .data(PEOPLE.filter(d=>d.w.length>=1), d=>d.id)
   .join('circle')
@@ -232,21 +358,43 @@ const headSel = gHead.selectAll('circle.head-dot')
 function render(){
   const y = currentYear;
   let activeCount = 0, doneCount = 0;
-  pathSel.each(function(d){
+
+  const segData = [];
+  PEOPLE.forEach(d=>{
     const wps = d.w.filter(w=>w.sx!=null);
-    if(wps.length<2){ d3.select(this).attr('d', null); return; }
-    const visible = wps.filter(w=>w.y<=y);
-    let segPts = visible.slice();
-    // include the interpolated current position as the path tip if between waypoints
-    if(visible.length>0 && visible.length<wps.length){
-      const [ix,iy] = screenPosAtYear(wps, y);
-      segPts = segPts.concat([{sx:ix,sy:iy}]);
-      activeCount++;
-    } else if(visible.length===wps.length){
-      doneCount++;
+    if(wps.length<2) return;
+    const visibleN = wps.filter(w=>w.y<=y).length;
+    if(visibleN>0 && visibleN<wps.length) activeCount++;
+    else if(visibleN===wps.length) doneCount++;
+    for(let i=0;i<wps.length-1;i++){
+      const a=wps[i], b=wps[i+1];
+      if(a.y>y) break;                 // segment hasn't started yet
+      const t = b.y<=y ? 1 : (y-a.y)/((b.y-a.y)||1);  // 1 = fully drawn, else partial
+      const P0=[a.sx,a.sy], P2=[b.sx,b.sy], P1=arcControlPoint(a.sx,a.sy,b.sx,b.sy);
+      let dAttr, endColor;
+      if(t>=1){
+        dAttr = `M${P0[0]},${P0[1]}Q${P1[0]},${P1[1]} ${P2[0]},${P2[1]}`;
+        endColor = b.color;
+      } else {
+        const [Q0,Q1,Q2] = truncatedQuad(P0,P1,P2,t);
+        dAttr = `M${Q0[0]},${Q0[1]}Q${Q1[0]},${Q1[1]} ${Q2[0]},${Q2[1]}`;
+        endColor = a.color;
+      }
+      segData.push({pid:d.id, key:`${d.id}-${i}`, d:dAttr, c2:endColor});
     }
-    d3.select(this).attr('d', segPts.length>=2 ? lineGen(segPts) : null);
   });
+
+  gPaths.selectAll('path.path-seg')
+    .data(segData, d=>d.key)
+    .join('path')
+    .attr('class','path-seg')
+    .attr('data-pid', d=>d.pid)
+    .attr('fill','none')
+    .attr('d', d=>d.d)
+    .attr('stroke', d=>d.c2)
+    .on('mousemove', (ev,d)=> showTooltip(ev, PEOPLE.find(p=>p.id===d.pid)))
+    .on('mouseleave', hideTooltip)
+    .on('click', (ev,d)=> { if(!selectMode) selectPerson(d.pid); });
 
   headSel.each(function(d){
     const wps = d.w.filter(w=>w.sx!=null);
@@ -263,21 +411,168 @@ function render(){
     .join('circle')
     .attr('class','wp-dot')
     .attr('r', d=> durRadius(d.dur==null ? 2 : d.dur))
-    .attr('cx', d=>d.sx).attr('cy', d=>d.sy);
+    .attr('cx', d=>d.sx).attr('cy', d=>d.sy)
+    .attr('fill', d=>d.color);
 
   applyHighlight();
+  updateAreaListNowState();
   yearSlider.value = Math.round(y);
   yearLabel.textContent = Math.round(y);
   statsEl.textContent = `${activeCount} journeys in progress · ${doneCount} completed · ${PEOPLE.length} total`;
 }
 
 function applyHighlight(){
-  pathSel.classed('dim', d=> selectedId!=null && d.id!==selectedId)
-         .classed('hi', d=> selectedId!=null && d.id===selectedId);
+  gPaths.selectAll('path.path-seg')
+    .classed('dim', d=> selectedId!=null && d.pid!==selectedId)
+    .classed('hi', d=> selectedId!=null && d.pid===selectedId);
   gDots.selectAll('circle.wp-dot')
     .classed('dim', d=> selectedId!=null && d.pid!==selectedId)
     .classed('hi', d=> selectedId!=null && d.pid===selectedId);
 }
+
+// ================= rectangle area-selection =================
+// Bounds are kept in the SAME (pre-zoom) coordinate space as every
+// waypoint's w.sx/w.sy, so testing "is this waypoint inside the box" never
+// needs to know the current zoom/pan — and the rectangle itself is drawn
+// inside gZoom, so it visually pans/zooms together with the map.
+let selBounds = null;      // {x0,y0,x1,y1} in data-space, or null
+let areaResults = [];      // [{id,name,by,dy,inst,intervals:[[y0,y1,place],...]}]
+let dragStart = null;
+
+const selectBtn = document.getElementById('selectBtn');
+const areaHint = document.getElementById('areaHint');
+const areaPanel = document.getElementById('areaPanel');
+
+function setSelectMode(on){
+  selectMode = on;
+  selectBtn.classList.toggle('active', on);
+  svg.classed('select-mode', on);
+  areaHint.style.display = on ? 'block' : 'none';
+}
+selectBtn.onclick = ()=> setSelectMode(!selectMode);
+
+function svgPointToData(event){
+  const p = d3.pointer(event, svg.node());
+  return d3.zoomTransform(svg.node()).invert(p);
+}
+
+svg.on('pointerdown.select', (event)=>{
+  if(!selectMode) return;
+  dragStart = svgPointToData(event);
+  gSel.selectAll('rect.sel-rect').remove();
+  gSel.append('rect').attr('class','sel-rect')
+    .attr('x', dragStart[0]).attr('y', dragStart[1]).attr('width',0).attr('height',0);
+  areaHint.style.display = 'none';
+});
+svg.on('pointermove.select', (event)=>{
+  if(!selectMode || !dragStart) return;
+  const p = svgPointToData(event);
+  const x0 = Math.min(dragStart[0], p[0]), x1 = Math.max(dragStart[0], p[0]);
+  const y0 = Math.min(dragStart[1], p[1]), y1 = Math.max(dragStart[1], p[1]);
+  gSel.select('rect.sel-rect').attr('x',x0).attr('y',y0).attr('width',x1-x0).attr('height',y1-y0);
+});
+svg.on('pointerup.select', (event)=>{
+  if(!selectMode || !dragStart) return;
+  const p = svgPointToData(event);
+  const x0 = Math.min(dragStart[0], p[0]), x1 = Math.max(dragStart[0], p[0]);
+  const y0 = Math.min(dragStart[1], p[1]), y1 = Math.max(dragStart[1], p[1]);
+  dragStart = null;
+  if(x1-x0 < 3 || y1-y0 < 3){ gSel.selectAll('rect.sel-rect').remove(); return; }  // treat a tiny drag as a misclick
+  selBounds = {x0,y0,x1,y1};
+  setSelectMode(false);
+  computeAreaSelection();
+});
+
+// sample each life-segment in (space,time) and merge the in-box samples
+// into contiguous year-intervals — simpler and more robust than exact
+// line/rectangle intersection math, and plenty precise at yearly granularity
+function computeAreaSelection(){
+  const {x0,y0,x1,y1} = selBounds;
+  const inBox = (x,y)=> x>=x0 && x<=x1 && y>=y0 && y<=y1;
+  const SAMPLES = 24;
+  const results = [];
+  PEOPLE.forEach(p=>{
+    const wps = p.w.filter(w=>w.sx!=null);
+    if(!wps.length) return;
+    const hits = [];   // raw {year, place} samples that fall inside the box
+    if(wps.length===1){
+      const w = wps[0];
+      if(inBox(w.sx,w.sy)) hits.push({y0:w.y, y1:w.y+(w.dur||0), place:w.p});
+    }
+    for(let i=0;i<wps.length-1;i++){
+      const a=wps[i], b=wps[i+1];
+      let curStart = null;
+      for(let s=0;s<=SAMPLES;s++){
+        const t = s/SAMPLES;
+        const x = a.sx+(b.sx-a.sx)*t, y = a.sy+(b.sy-a.sy)*t;
+        const yr = a.y+(b.y-a.y)*t;
+        const inside = inBox(x,y);
+        if(inside && curStart===null) curStart = yr;
+        if(!inside && curStart!==null){ hits.push({y0:curStart, y1:yr, place: t<0.5?a.p:b.p}); curStart=null; }
+      }
+      if(curStart!==null) hits.push({y0:curStart, y1:b.y, place:b.p});
+    }
+    if(!hits.length) return;
+    // merge intervals that are touching/overlapping (adjacent segments can
+    // each contribute a sliver of the same real stay)
+    hits.sort((a,b)=>a.y0-b.y0);
+    const merged = [hits[0]];
+    for(let i=1;i<hits.length;i++){
+      const last = merged[merged.length-1], cur = hits[i];
+      if(cur.y0 <= last.y1 + 0.5){ last.y1 = Math.max(last.y1, cur.y1); }
+      else merged.push(cur);
+    }
+    results.push({id:p.id, name:p.n, by:p.by, dy:p.dy, inst:p.inst,
+      intervals: merged.map(m=>[Math.round(m.y0), Math.round(m.y1), m.place])});
+  });
+  results.sort((a,b)=> a.intervals[0][0]-b.intervals[0][0]);
+  areaResults = results;
+  renderAreaPanel();
+}
+
+function renderAreaPanel(){
+  areaPanel.style.display = 'block';
+  document.getElementById('areaMeta').textContent =
+    areaResults.length ? `${areaResults.length} people ever passed through this area` : 'No one in this dataset passed through this area';
+  const listEl = document.getElementById('areaList');
+  if(!areaResults.length){
+    listEl.innerHTML = '<div class="empty">Try drawing a larger box, or over a region more of these biographies actually mention.</div>';
+    return;
+  }
+  listEl.innerHTML = areaResults.map(r=>{
+    const when = r.intervals.map(iv => iv[0]===iv[1] ? `${iv[0]}` : `${iv[0]}–${iv[1]}`).join(', ');
+    const places = [...new Set(r.intervals.map(iv=>iv[2]))].slice(0,2).join(' / ');
+    return `<div class="a-row" data-id="${r.id}">
+      <div class="a-name">${r.name}</div>
+      <div class="a-when">${when}</div>
+      <div class="a-place">${places}</div>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('.a-row').forEach(el=>{
+    el.onclick = ()=>{
+      const id = +el.dataset.id;
+      const r = areaResults.find(x=>x.id===id);
+      if(r){ currentYear = Math.max(currentYear, r.intervals[0][0]); render(); }
+      selectPerson(id);
+    };
+  });
+  updateAreaListNowState();
+}
+
+function updateAreaListNowState(){
+  if(!areaResults.length) return;
+  document.querySelectorAll('#areaList .a-row').forEach(el=>{
+    const r = areaResults.find(x=>x.id===+el.dataset.id);
+    const now = r && r.intervals.some(iv=> currentYear>=iv[0] && currentYear<=iv[1]);
+    el.classList.toggle('now', !!now);
+  });
+}
+
+document.getElementById('areaClose').onclick = ()=>{
+  selBounds = null; areaResults = [];
+  gSel.selectAll('rect.sel-rect').remove();
+  areaPanel.style.display = 'none';
+};
 
 function showTooltip(ev,d){
   const wps = d.w.filter(w=>w.sx!=null && w.y<=currentYear);
@@ -288,7 +583,7 @@ function showTooltip(ev,d){
   tooltip.style.top = (ev.clientY+10)+'px';
   const durTxt = last.dur ? ` · stayed ~${Math.round(last.dur)} yr${Math.round(last.dur)===1?'':'s'}` : '';
   tooltip.innerHTML = `<b>${d.n}</b><br>${d.by||'?'}–${d.dy||'?'}<br>
-    <span class="place">${last.p}</span>${last.k? '' : ' <i>(estimated)</i>'} · ${Math.round(last.y)}${durTxt}`;
+    <span class="place" style="color:${last.color}">${last.p}</span>${last.k? '' : ' <i>(estimated)</i>'} · ${Math.round(last.y)}${durTxt}`;
 }
 function hideTooltip(){ tooltip.style.display='none'; }
 
@@ -313,7 +608,11 @@ function showDetail(d){
   routeEl.innerHTML = d.w.map(w=>{
     const cur = w.y<=currentYear;
     const durTxt = w.dur ? ` <span class="dur">(~${Math.round(w.dur)} yr${Math.round(w.dur)===1?'':'s'})</span>` : '';
-    return `<div class="step ${cur?'cur':''}"><span class="yr">${Math.round(w.y)}${w.k?'':'~'}</span> ${w.p}${w.k?'':' <i>(est.)</i>'}${durTxt}</div>`;
+    return `<div class="step ${cur?'cur':''}">`
+      + `<span class="dot" style="background:${w.color}"></span>`
+      + `<span><span class="yr">${Math.round(w.y)}${w.k?'':'~'}</span> `
+      + `<span style="color:${w.color}">${w.p}</span>${w.k?'':' <i>(est.)</i>'}${durTxt}</span>`
+      + `</div>`;
   }).join('');
 }
 
@@ -372,8 +671,12 @@ searchInput.oninput = (e)=>runSearch(e.target.value);
 
 window.addEventListener('resize', ()=>{
   fitProjection();
+  svg.call(zoom.transform, d3.zoomIdentity);  // old pan/zoom no longer matches the refit projection
   gMap.selectAll('path.land').attr('d', path);
   gGrat.select('path').attr('d', path(graticule()));
+  countryLabels.forEach(d=>{ const c = path.centroid(d.feature); d.cx=c[0]; d.cy=c[1]; d.area=path.area(d.feature); });
+  labelSel.attr('x', d=>d.cx).attr('y', d=>d.cy);
+  updateLabelVisibility(1);
   PEOPLE.forEach(p=> p.w.forEach(w=>{ const c=projection([w.lo,w.la]); w.sx=c?c[0]:null; w.sy=c?c[1]:null; }));
   render();
 });
