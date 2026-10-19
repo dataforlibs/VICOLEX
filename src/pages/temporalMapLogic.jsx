@@ -1,0 +1,3212 @@
+/* eslint-disable no-unused-vars, no-loop-func -- ported as-is from the original
+   standalone HTML file; these are pre-existing, harmless findings in
+   otherwise-unchanged vanilla JS, not new issues introduced by the port. */
+import * as d3 from 'd3';
+import L from 'leaflet';
+import 'leaflet.heat';
+ 
+// Ported as-is from the standalone dk508_temporal_map.html's inline
+// <script> block. DATA now arrives as a function argument (fetched at
+// runtime from /data/temporal_map.json by TemporalMap.jsx) instead of a
+// hardcoded top-of-file literal, and d3/L come from npm imports instead of
+// CDN <script> globals -- everything else below is unchanged. Returns a
+// destroy() handle so the React wrapper can tear down both Leaflet map
+// instances on unmount (Leaflet throws if a map is re-initialized on a
+// stale container, which matters under React 18 StrictMode's dev-only
+// double-effect and when navigating away from and back to this route).
+export function initTemporalMap(container, DATA) {
+ 
+// Sunburst state variables are declared up-front (rather than near the
+				 // code that uses them) because several functions defined and CALLED early
+				 // -- e.g. renderModernRange() -> scheduleSunburstUpdate() runs during the
+				 // very first wireRangeTimeline() call below -- close over these bindings.
+				 // `let` bindings live in the temporal dead zone until their declaration
+				 // line executes, so declaring them late would throw a ReferenceError the
+				 // first time the map/timelines initialize.
+				 let sunSvg, sunG, sunRadius, sunRoot, sunArc, sunColor;
+				 let sunPathSel, sunLabelSel, sunParentCircle, sunCenterLabel, sunCenterSub;
+				 let sunDebounceTimer = null;
+
+				 // When a map marker is clicked we "pin" the right panel to that single
+				 // location's records (subjects + a publication-year timeline) instead of
+				 // whatever's currently in the map view. Declared up top for the same
+				 // temporal-dead-zone reason as the sun* variables above: renderModernRange/
+				 // renderAncient/renderPubRange (which read pinnedRecords via
+				 // scheduleSunburstUpdate) run synchronously during page init.
+				 let pinnedRecords = null;
+				 let pinnedLabel = null;
+				 // Small embedded Leaflet map inside the pinned panel, showing where THIS
+				 // location's records were published. Created lazily (on first pin) rather
+				 // than up front, since #pinPubMap starts at zero size while its section is
+				 // display:none -- Leaflet would measure a 0x0 container if initialized
+				 // before the section is ever shown.
+				 let pinMap = null;
+				 let pinMapLayer = null;
+
+				 // Publication-place <-> subject-place link arcs. modernGeonameCoords /
+				 // ancientGeonameCoords / pubPlaceCoordsActive are refreshed by their
+				 // respective render*() functions each time those layers redraw, so
+				 // renderLinks() can always find "whatever's currently plotted" without
+				 // recomputing marker filtering itself. Declared up top for the same
+				 // temporal-dead-zone reason as everything else above -- renderModernRange
+				 // (called synchronously during page init) writes to these.
+				 let modernGeonameCoords = new Map();
+				 let ancientGeonameCoords = new Map();
+				 let pubPlaceCoordsActive = new Map();
+				 let linksDebounceTimer = null;
+				 let geoLinksDebounceTimer = null;
+				 let pubLinksDebounceTimer = null;
+
+				 // Network view: a force-directed node-link graph of the same subject
+				 // place <-> subject place co-occurrences as the geo-links arc overlay,
+				 // with community detection. Rendered into #networkSvg instead of the
+				 // Leaflet map; only actually (re)builds when that view is the one on
+				 // screen (see scheduleNetworkUpdate). Declared up top for the same
+				 // temporal-dead-zone reason as everything else here.
+				 let mainView = 'map';
+				 let networkDebounceTimer = null;
+				 let networkSim = null;
+				 let networkZoomBehavior = null;
+				 let networkBuilt = false;
+				 // Community detection results, shared between the Network view and the
+				 // Map's optional "color by community" mode so a place gets the same color
+				 // and community membership regardless of which view is showing it.
+				 let communityByName = new Map();
+				 let networkGraphNodes = [];
+				 let networkGraphEdges = [];
+				 let networkMessage = '';
+				 // Core/periphery (k-core) + ego-network results, computed alongside
+				 // community detection in updateCommunityAssignments() and consumed by the
+				 // Network view (ring thickness) and the pinned-location panel (per-place
+				 // ego stats), regardless of which view is on screen.
+				 let networkCoreNumbers = new Map();
+				 let networkAdjacency = new Map();
+				 let networkMaxCore = 0;
+				 let networkBetweenness = new Map();
+
+				 // Marker rendering style: 'bubbles' (individual circleMarkers, the
+				 // default), 'hex' (nearby places pooled into a hexagonal grid, still
+				 // clickable), or 'heat' (density-only canvas heatmap, no click). Same
+				 // early-declaration reasoning as above -- read inside renderModernRange
+				 // etc. during synchronous page init.
+				 let mapStyle = 'bubbles';
+				 // Bounds tracked independently of the visible Leaflet layer objects,
+				 // because L.heatLayer (used in 'heat' mode) has no getBounds() -- the
+				 // "Zoom map to this" buttons need a bounds source that works in every mode.
+				 let lastModernBounds = null;
+				 let lastAncientBounds = null;
+				 let lastPubBounds = null;
+
+				 // Language filter: selectedLanguages starts with every language selected
+				 // (i.e. no-op filtering) and shrinks as the user unchecks boxes in the
+				 // "Filter by language" panel. ALL_LANGUAGES_COUNT lets the hot filtering
+				 // path fast-exit to "everything passes" when nothing has been deselected.
+				 let selectedLanguages = new Set(DATA.languageList.map(l => l.name));
+				 const ALL_LANGUAGES_COUNT = selectedLanguages.size;
+				 function recordPassesLanguageFilter(r) {
+				     if (selectedLanguages.size >= ALL_LANGUAGES_COUNT) return true;
+				     const langs = r.languages.length ? r.languages : [DATA.unspecifiedLanguage];
+				     for (const l of langs) if (selectedLanguages.has(l)) return true;
+				     return false;
+				 }
+
+				 // ============================================================ the map ===
+				 const map = L.map('map', { worldCopyJump: true }).setView([48.5, 32.5], 5);
+				 // CARTO's basemaps.cartocdn.com raster tiles now require a (free, signup-
+				 // gated) API key -- unauthenticated requests get a 403 or a tiled "API KEY
+				 // REQUIRED" watermark instead of the actual map, which is what silently
+				 // broke this page. Esri's World_Dark_Gray_Base is a free, no-signup,
+				 // no-key dark basemap that's a close visual match -- note its tile path
+				 // order is {z}/{y}/{x} (y and x swapped from CARTO/OSM's usual order).
+				 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+				     attribution: 'Esri, HERE, Garmin, FAO, NOAA, USGS &copy; OpenStreetMap contributors, GIS User Community',
+				     maxZoom: 16
+				 }).addTo(map);
+
+				 function fmtYear(y) { return y < 0 ? (-y) + ' BC' : y + ' AD'; }
+				 function fmtRange(s, e) { return s === e ? fmtYear(s) : fmtYear(s) + ' – ' + fmtYear(e); }
+				 function radiusFor(n) { return Math.max(4, Math.min(28, 3.2 * Math.sqrt(n))); }
+				 function escapeHtml(s) {
+				     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+				 }
+				 function geonameXY(name) { const c = DATA.geonameCoords[name]; return c ? [c[0], c[1]] : null; }
+				 function placeXY(name) { const c = DATA.placeCoords[name]; return c ? [c[0], c[1]] : null; }
+
+				 let currentAboutRange = [DATA.aboutYearMin, DATA.aboutYearMax];
+				 let currentPubRange = [DATA.pubYearMin, DATA.pubYearMax];
+
+				 // Non-null while a keyword search is active. Two complementary filters, both
+				 // built from the exact records the search actually matched (kwCurrentGroups):
+				 //   searchGeonameFilter: Map<geoname, Set<recordId>> -- for the "about"
+				 //     (modern + ancient) layers, keyed by geoname because a record can have
+				 //     several about-mentions and only some of them may be the ones that
+				 //     matched. A geoname-only check here is not enough: a high-volume place
+				 //     like "Ukraine" being in the allow-list would otherwise let through
+				 //     every OTHER record that happens to mention Ukraine too, regardless of
+				 //     whether it matched the search at all.
+				 //   searchRecordFilter: Set<recordId> -- the full set of matched record ids
+				 //     (including ones with no plottable "about" location), for anything that
+				 //     doesn't key off a geoname -- the publication-place layer and the
+				 //     right-panel "visible records" count in particular.
+				 // Read by renderModernRange/renderAncient/renderPubRange/
+				 // recomputeVisibleRecords below (every other filter -- date range, language
+				 // -- already funnels through those functions, so this is the same
+				 // mechanism, not a bolt-on).
+				 let searchGeonameFilter = null;
+				 let searchRecordFilter = null;
+				 function searchAllowsAbout(geoname, recordId) {
+				     if (!searchGeonameFilter) return true;
+				     const allowed = searchGeonameFilter.get(geoname);
+				     return !!allowed && allowed.has(recordId);
+				 }
+				 function searchAllowsRecord(recordId) {
+				     return !searchRecordFilter || searchRecordFilter.has(recordId);
+				 }
+
+				 // When on, the "aboutness" and "publication" layers each additionally
+				 // require the OTHER timeline's condition too (an AND across both axes),
+				 // rather than the default independent behavior. Mirrors the same
+				 // both-conditions test the "publication place <-> subject place" links
+				 // layer has always used (see renderLinks() below) -- this just extends it
+				 // to the plain point layers themselves.
+				 let intersectTimelines = false;
+				 // Applies unconditionally whenever the toggle is on, using whatever range
+				 // is currently set on the OTHER timeline's slider -- regardless of
+				 // whether that layer's own "Show this layer" checkbox happens to be
+				 // checked. Layer visibility only controls whether that layer's markers
+				 // are drawn on the map; it is not part of what "your selected years"
+				 // means for the intersect filter (an earlier version made the constraint
+				 // silently drop when the other layer was hidden, which contradicted the
+				 // toggle's own description and produced records that visibly weren't
+				 // published in the selected publication-year window even with "require
+				 // both" checked).
+				 function intersectRequiresPub() { return intersectTimelines; }
+				 function intersectRequiresAbout() { return intersectTimelines; }
+				 function recordHasAboutInRange(r) {
+				     // Modern/ancient are one shared slider (currentAboutRange), split into
+				     // two marker styles only for map legibility -- toggleModern/toggleAncient
+				     // hide/show markers, they don't redefine "your selected years". Same
+				     // principle as intersectRequiresPub/About above: a hidden marker style
+				     // still counts if its date falls in the selected range.
+				     const [aLo, aHi] = currentAboutRange;
+				     for (const m of r.about) {
+					 if (m.s <= aHi && m.e >= aLo) return true;
+				     }
+				     return false;
+				 }
+				 function recordHasPubInRange(r) {
+				     const [pLo, pHi] = currentPubRange;
+				     return r.pubY !== null && r.pubY >= pLo && r.pubY <= pHi;
+				 }
+
+				 function renderUnknownBox(aggMap, summaryId, listId, unitLabel) {
+				     let total = 0;
+				     const entries = Array.from(aggMap.entries()).map(([name, acc]) => { total += acc.n; return [name, acc]; });
+				     entries.sort((a, b) => b[1].n - a[1].n);
+				     document.getElementById(summaryId).textContent =
+					 entries.length + ' unmapped location(s), ' + total + ' ' + unitLabel + ' in this range (no coordinates found for these)';
+				     document.getElementById(listId).innerHTML = entries.slice(0, 12).map(([name, acc]) =>
+					 '<div><b>' + escapeHtml(name) + '</b> — ' + acc.n + ' ' + unitLabel + '</div>'
+				     ).join('') || '<div>(none in this range)</div>';
+				 }
+
+				 // --- hex-grid aggregation helpers (flat-top hexagons, axial coords) ------
+				 // Self-contained (no extra library): points are projected to absolute
+				 // world-pixel space at the CURRENT zoom via map.project(), binned onto an
+				 // axial hex grid, then the hex corners are unprojected back to lat/lng so
+				 // they can be drawn as ordinary L.polygon objects. Because map.project()
+				 // is independent of the current pan offset, panning alone never requires
+				 // re-binning -- only a zoom change does (see the 'zoomend' handler below).
+				 const HEX_SIZE_PX = 28;
+				 function hexRound(x, z) {
+				     let y = -x - z;
+				     let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+				     const dx = Math.abs(rx - x), dy = Math.abs(ry - y), dz = Math.abs(rz - z);
+				     if (dx > dy && dx > dz) rx = -ry - rz;
+				     else if (dy > dz) ry = -rx - rz;
+				     else rz = -rx - ry;
+				     return [rx, rz];
+				 }
+				 function pixelToHex(px, py, size) {
+				     const q = (2 / 3 * px) / size;
+				     const r = (-1 / 3 * px + Math.sqrt(3) / 3 * py) / size;
+				     return hexRound(q, r);
+				 }
+				 function hexToPixel(q, r, size) {
+				     return [size * 1.5 * q, size * Math.sqrt(3) * (r + q / 2)];
+				 }
+				 function hexCorners(cx, cy, size) {
+				     const pts = [];
+				     for (let i = 0; i < 6; i++) {
+					 const a = Math.PI / 180 * (60 * i);
+					 pts.push([cx + size * Math.cos(a), cy + size * Math.sin(a)]);
+				     }
+				     return pts;
+				 }
+
+				 // Pools an aggregation map (name -> {lat, lon, n, records, titles}) into
+				 // hex cells and draws each cell as a clickable L.polygon in `group`.
+				 function drawHexPoints(aggMap, group, opts) {
+				     if (!aggMap.size) return;
+				     const zoom = map.getZoom();
+				     const bins = new Map();
+				     for (const [name, acc] of aggMap) {
+					 const p = map.project([acc.lat, acc.lon], zoom);
+					 const [q, r] = pixelToHex(p.x, p.y, HEX_SIZE_PX);
+					 const key = q + '|' + r;
+					 let bin = bins.get(key);
+					 if (!bin) { bin = { q, r, n: 0, names: [], records: [], recordSet: new Set() }; bins.set(key, bin); }
+					 bin.n += acc.n;
+					 bin.names.push(name);
+					 if (acc.minS !== undefined) {
+					     bin.minS = (bin.minS === undefined) ? acc.minS : Math.min(bin.minS, acc.minS);
+					     bin.maxE = (bin.maxE === undefined) ? acc.maxE : Math.max(bin.maxE, acc.maxE);
+					 }
+					 for (const rec of (acc.records || [])) {
+					     if (!bin.recordSet.has(rec.id)) { bin.recordSet.add(rec.id); bin.records.push(rec); }
+					 }
+				     }
+				     const maxN = Math.max(1, ...Array.from(bins.values(), b => b.n));
+				     for (const bin of bins.values()) {
+					 const [cx, cy] = hexToPixel(bin.q, bin.r, HEX_SIZE_PX);
+					 const corners = hexCorners(cx, cy, HEX_SIZE_PX * 0.94).map(([x, y]) => {
+					     const ll = map.unproject(L.point(x, y), zoom);
+					     return [ll.lat, ll.lng];
+					 });
+					 const frac = bin.n / maxN;
+					 const poly = L.polygon(corners, {
+					     color: opts.stroke, weight: 1, fillColor: opts.fill,
+					     fillOpacity: 0.22 + 0.55 * frac, interactive: true
+					 });
+					 const shownNames = bin.names.slice(0, 6).join(', ') + (bin.names.length > 6 ? ', …' : '');
+					 poly.bindPopup(
+					     '<div class="popup-title">' + bin.names.length + ' ' + opts.unitLabel + '</div>' +
+						 '<div class="popup-range">' + opts.describeCount(bin.n, bin.minS, bin.maxE) + '</div>' +
+						 '<div class="popup-titles">' + escapeHtml(shownNames) + '</div>'
+					 );
+					 if (opts.onClick) poly.on('click', () => opts.onClick(bin.names.length + ' ' + opts.unitLabel + ' (hex cell)', bin.records));
+					 poly.addTo(group);
+				     }
+				 }
+
+				 // Feeds an aggregation map straight into leaflet.heat -- density only, no
+				 // click interaction (standard for heatmaps).
+				 function drawHeatPoints(aggMap, group, opts) {
+				     if (!aggMap.size) return;
+				     // sqrt-compress the weights (same idea as radiusFor() for bubbles) so a
+				     // few heavily-mentioned places don't wash out every other point down
+				     // near zero intensity -- without this, isolated low-count points were
+				     // rendering at the very dark end of the gradient, nearly invisible
+				     // against the dark basemap.
+				     const pts = Array.from(aggMap.values(), acc => [acc.lat, acc.lon, Math.sqrt(acc.n)]);
+				     const maxW = Math.max(1, ...pts.map(p => p[2]));
+				     L.heatLayer(pts, {
+					 radius: 30, blur: 24, maxZoom: 12, max: maxW, minOpacity: 0.35,
+					 gradient: opts.heatGradient
+				     }).addTo(group);
+				 }
+
+				 // --- "aboutness" layer, filtered to a RANGE (any overlap counts) -------
+				 const modernLayer = L.featureGroup().addTo(map);
+				 function renderModernRange(minY, maxY) {
+				     currentAboutRange = [minY, maxY];
+				     modernLayer.clearLayers();
+				     const byGeoname = new Map();
+				     const unknownAgg = new Map();
+				     const requirePub = intersectRequiresPub();
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+					 if (requirePub && !recordHasPubInRange(r)) continue;
+					 for (const m of r.about) {
+					     if (m.s < DATA.ancientCutoff) continue;
+					     if (!(m.s <= maxY && m.e >= minY)) continue;
+					     if (!searchAllowsAbout(m.g, r.id)) continue;
+					     const xy = geonameXY(m.g);
+					     const agg = xy ? byGeoname : unknownAgg;
+					     let acc = agg.get(m.g);
+					     if (!acc) { acc = xy ? { lat: xy[0], lon: xy[1], n: 0, titles: [], records: [], recordSet: new Set(), minS: m.s, maxE: m.e } : { n: 0, titles: [] }; agg.set(m.g, acc); }
+					     acc.n++;
+					     if (xy) { acc.minS = Math.min(acc.minS, m.s); acc.maxE = Math.max(acc.maxE, m.e); }
+					     if (r.title && acc.titles.length < 3 && !acc.titles.includes(r.title)) acc.titles.push(r.title);
+					     if (xy && !acc.recordSet.has(r.id)) { acc.recordSet.add(r.id); acc.records.push(r); }
+					 }
+				     }
+				     let activeCount = 0, mentionCount = 0;
+				     for (const acc of byGeoname.values()) { activeCount++; mentionCount += acc.n; }
+				     if (byGeoname.size) {
+					 lastModernBounds = L.latLngBounds(Array.from(byGeoname.values(), acc => [acc.lat, acc.lon]));
+				     } else {
+					 lastModernBounds = null;
+				     }
+				     if (mapStyle === 'bubbles') {
+					 for (const [geoname, acc] of byGeoname) {
+					     const m = L.circleMarker([acc.lat, acc.lon], {
+						 radius: radiusFor(acc.n), color: '#1b6fd1', weight: 1,
+						 fillColor: communityFillFor(geoname, '#4fa3ff'), fillOpacity: 0.65
+					     });
+					     m.geonameId = geoname;
+					     m._dkOrigFillColor = '#4fa3ff';
+					     m._dkOrigFillOpacity = 0.65;
+					     const titlesHtml = acc.titles.map(t => '&ldquo;' + escapeHtml(t) + '&rdquo;<br>').join('');
+					     m.bindPopup(
+						 '<div class="popup-title">' + escapeHtml(geoname) + '</div>' +
+						     '<div class="popup-range">' + acc.n + ' mention(s), actual dates ' + fmtRange(acc.minS, acc.maxE) + '</div>' +
+						     '<div class="popup-titles">' + titlesHtml + '</div>'
+					     );
+					     m.on('click', () => pinLocation(geoname, acc.records));
+					     m.addTo(modernLayer);
+					 }
+				     } else if (mapStyle === 'hex') {
+					 drawHexPoints(byGeoname, modernLayer, {
+					     stroke: '#1b6fd1', fill: '#4fa3ff', unitLabel: 'subject place(s)',
+					     describeCount: (n, minS, maxE) => n + ' mention(s), actual dates ' + (minS !== undefined ? fmtRange(minS, maxE) : fmtRange(minY, maxY)),
+					     onClick: pinLocation
+					 });
+				     } else {
+					 drawHeatPoints(byGeoname, modernLayer, {
+					     heatGradient: { 0.1: '#1b4f8f', 0.4: '#2f7fd6', 0.7: '#4fa3ff', 1: '#eaf4ff' }
+					 });
+				     }
+				     window.__modernStats = activeCount + ' subject place(s), ' + mentionCount + ' mention(s) in range ' + fmtRange(minY, maxY);
+				     renderUnknownBox(unknownAgg, 'aboutUnknownSummary', 'aboutUnknownList', 'mention(s)');
+				     modernGeonameCoords = new Map(Array.from(byGeoname, ([name, acc]) => [name, [acc.lat, acc.lon]]));
+				     updateStats();
+				     scheduleSunburstUpdate();
+				     scheduleLinksUpdate();
+				     scheduleGeoLinksUpdate();
+				     scheduleNetworkUpdate();
+				     schedulePubLinksUpdate();
+				 }
+
+				 // --- ancient/medieval layer -- now driven by the SAME aboutness slider as
+				 // the modern layer (an overlap test against [minY, maxY]), rather than
+				 // always showing every ancient mention regardless of the timeline. This is
+				 // what lets negative (BC) years live on the one topical timeline instead of
+				 // a separate always-on layer.
+				 const ancientLayer = L.featureGroup().addTo(map);
+				 function renderAncient(minY, maxY) {
+				     ancientLayer.clearLayers();
+				     const byGeoname = new Map();
+				     const requirePub = intersectRequiresPub();
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+					 if (requirePub && !recordHasPubInRange(r)) continue;
+					 for (const m of r.about) {
+					     if (m.s >= DATA.ancientCutoff) continue;
+					     if (!(m.s <= maxY && m.e >= minY)) continue;
+					     if (!searchAllowsAbout(m.g, r.id)) continue;
+					     const xy = geonameXY(m.g);
+					     if (!xy) continue;
+					     let acc = byGeoname.get(m.g);
+					     if (!acc) { acc = { lat: xy[0], lon: xy[1], n: 0, titles: [], ranges: new Set(), records: [], recordSet: new Set() }; byGeoname.set(m.g, acc); }
+					     acc.n++;
+					     acc.ranges.add(m.s + '|' + m.e);
+					     if (r.title && acc.titles.length < 3 && !acc.titles.includes(r.title)) acc.titles.push(r.title);
+					     if (!acc.recordSet.has(r.id)) { acc.recordSet.add(r.id); acc.records.push(r); }
+					 }
+				     }
+				     if (byGeoname.size) {
+					 lastAncientBounds = L.latLngBounds(Array.from(byGeoname.values(), acc => [acc.lat, acc.lon]));
+				     } else {
+					 lastAncientBounds = null;
+				     }
+				     if (mapStyle === 'bubbles') {
+					 for (const [geoname, acc] of byGeoname) {
+					     const m = L.circleMarker([acc.lat, acc.lon], {
+						 radius: radiusFor(acc.n), color: '#a8641f', weight: 1,
+						 fillColor: communityFillFor(geoname, '#e8a33d'), fillOpacity: 0.8
+					     });
+					     m.geonameId = geoname;
+					     m._dkOrigFillColor = '#e8a33d';
+					     m._dkOrigFillOpacity = 0.8;
+					     const rangesHtml = Array.from(acc.ranges).map(r => { const [s, e] = r.split('|').map(Number); return fmtRange(s, e); }).join(', ');
+					     const titlesHtml = acc.titles.map(t => '&ldquo;' + escapeHtml(t) + '&rdquo;<br>').join('');
+					     m.bindPopup(
+						 '<div class="popup-title">' + escapeHtml(geoname) + '</div>' +
+						     '<div class="popup-range">' + rangesHtml + '</div>' +
+						     '<div class="popup-titles">' + titlesHtml + '</div>'
+					     );
+					     m.on('click', () => pinLocation(geoname, acc.records));
+					     m.addTo(ancientLayer);
+					 }
+				     } else if (mapStyle === 'hex') {
+					 drawHexPoints(byGeoname, ancientLayer, {
+					     stroke: '#a8641f', fill: '#e8a33d', unitLabel: 'ancient/medieval place(s)',
+					     describeCount: n => n + ' mention(s) (various ancient/medieval dates)',
+					     onClick: pinLocation
+					 });
+				     } else {
+					 drawHeatPoints(byGeoname, ancientLayer, {
+					     heatGradient: { 0.1: '#a8641f', 0.4: '#c9822c', 0.7: '#e8a33d', 1: '#fff2d6' }
+					 });
+				     }
+				     ancientGeonameCoords = new Map(Array.from(byGeoname, ([name, acc]) => [name, [acc.lat, acc.lon]]));
+				     scheduleLinksUpdate();
+				     scheduleGeoLinksUpdate();
+				     scheduleNetworkUpdate();
+				     schedulePubLinksUpdate();
+				 }
+
+				 // --- places-of-publication layer, filtered to a RANGE (year inside it) --
+				 const pubLayer = L.featureGroup().addTo(map);
+				 function renderPubRange(minY, maxY) {
+				     currentPubRange = [minY, maxY];
+				     pubLayer.clearLayers();
+				     const byPlace = new Map();
+				     const unknownAgg = new Map();
+				     const requireAbout = intersectRequiresAbout();
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+					 if (r.pubY === null || r.pubY < minY || r.pubY > maxY) continue;
+					 if (requireAbout && !recordHasAboutInRange(r)) continue;
+					 if (!searchAllowsRecord(r.id)) continue;
+					 if (r.pubP.length === 0) {
+					     let acc = unknownAgg.get(DATA.noPlaceLabel);
+					     if (!acc) { acc = { n: 0, titles: [] }; unknownAgg.set(DATA.noPlaceLabel, acc); }
+					     acc.n++;
+					     if (r.title && acc.titles.length < 3 && !acc.titles.includes(r.title)) acc.titles.push(r.title);
+					     continue;
+					 }
+					 for (const place of r.pubP) {
+					     const xy = placeXY(place);
+					     const agg = xy ? byPlace : unknownAgg;
+					     let acc = agg.get(place);
+					     if (!acc) { acc = xy ? { lat: xy[0], lon: xy[1], n: 0, titles: [], records: [], recordSet: new Set(), minS: r.pubY, maxE: r.pubY } : { n: 0, titles: [] }; agg.set(place, acc); }
+					     acc.n++;
+					     if (xy) { acc.minS = Math.min(acc.minS, r.pubY); acc.maxE = Math.max(acc.maxE, r.pubY); }
+					     if (r.title && acc.titles.length < 3 && !acc.titles.includes(r.title)) acc.titles.push(r.title);
+					     if (xy && !acc.recordSet.has(r.id)) { acc.recordSet.add(r.id); acc.records.push(r); }
+					 }
+				     }
+				     let placeCount = 0, recordCount = 0;
+				     for (const acc of byPlace.values()) { placeCount++; recordCount += acc.n; }
+				     if (byPlace.size) {
+					 lastPubBounds = L.latLngBounds(Array.from(byPlace.values(), acc => [acc.lat, acc.lon]));
+				     } else {
+					 lastPubBounds = null;
+				     }
+				     if (mapStyle === 'bubbles') {
+					 for (const [place, acc] of byPlace) {
+					     const m = L.circleMarker([acc.lat, acc.lon], {
+						 radius: radiusFor(acc.n), color: '#3f8a35', weight: 1,
+						 fillColor: communityFillFor(place, '#8bd17c'), fillOpacity: 0.6
+					     });
+					     m.placeId = place;
+					     m._dkOrigFillColor = '#8bd17c';
+					     m._dkOrigFillOpacity = 0.6;
+					     const titlesHtml = acc.titles.map(t => '&ldquo;' + escapeHtml(t) + '&rdquo;<br>').join('');
+					     m.bindPopup(
+						 '<div class="popup-title">' + escapeHtml(place) + '</div>' +
+						     '<div class="popup-range">' + acc.n + ' record(s) published here, actual dates ' + fmtRange(acc.minS, acc.maxE) + '</div>' +
+						     '<div class="popup-titles">' + titlesHtml + '</div>'
+					     );
+					     m.on('click', () => pinLocation(place, acc.records));
+					     m.addTo(pubLayer);
+					 }
+				     } else if (mapStyle === 'hex') {
+					 drawHexPoints(byPlace, pubLayer, {
+					     stroke: '#3f8a35', fill: '#8bd17c', unitLabel: 'publication place(s)',
+					     describeCount: (n, minS, maxE) => n + ' record(s) published here, actual dates ' + (minS !== undefined ? fmtRange(minS, maxE) : fmtRange(minY, maxY)),
+					     onClick: pinLocation
+					 });
+				     } else {
+					 drawHeatPoints(byPlace, pubLayer, {
+					     heatGradient: { 0.1: '#2c7a24', 0.4: '#4fa73f', 0.7: '#8bd17c', 1: '#f0fbea' }
+					 });
+				     }
+				     window.__pubStats = placeCount + ' publication place(s), ' + recordCount + ' record(s) in range ' + fmtRange(minY, maxY);
+				     renderUnknownBox(unknownAgg, 'pubUnknownSummary', 'pubUnknownList', 'record(s)');
+				     pubPlaceCoordsActive = new Map(Array.from(byPlace, ([name, acc]) => [name, [acc.lat, acc.lon]]));
+				     updateStats();
+				     scheduleSunburstUpdate();
+				     scheduleLinksUpdate();
+				     scheduleNetworkUpdate();
+				     schedulePubLinksUpdate();
+				 }
+
+				 // --- link arcs: publication place <-> subject place, for records that ---
+				 // currently have BOTH endpoints plotted on the map -------------------------
+				 const linksLayer = L.layerGroup(); // opt-in overlay, not added to map by default
+				 function computeArcPoints(latlng1, latlng2, curvature, numPoints) {
+				     const [lat1, lon1] = latlng1, [lat2, lon2] = latlng2;
+				     const mx = (lat1 + lat2) / 2, my = (lon1 + lon2) / 2;
+				     const dx = lat2 - lat1, dy = lon2 - lon1;
+				     const cx = mx + (-dy) * curvature, cy = my + (dx) * curvature;
+				     const pts = [];
+				     for (let i = 0; i <= numPoints; i++) {
+					 const t = i / numPoints;
+					 const lat = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * cx + t * t * lat2;
+					 const lon = (1 - t) * (1 - t) * lon1 + 2 * (1 - t) * t * cy + t * t * lon2;
+					 pts.push([lat, lon]);
+				     }
+				     return pts;
+				 }
+
+				 function renderLinks() {
+				     linksLayer.clearLayers();
+				     if (!document.getElementById('toggleLinks').checked) {
+					 document.getElementById('linksStats').textContent = '';
+					 return;
+				     }
+				     const showModern = document.getElementById('toggleModern').checked;
+				     const showAncient = document.getElementById('toggleAncient').checked;
+				     const showPub = document.getElementById('togglePubs').checked;
+
+				     const aboutCoordsActive = new Map();
+				     if (showModern) for (const [k, v] of modernGeonameCoords) aboutCoordsActive.set(k, v);
+				     if (showAncient) for (const [k, v] of ancientGeonameCoords) aboutCoordsActive.set(k, v);
+				     const pubCoordsActive = showPub ? pubPlaceCoordsActive : new Map();
+
+				     if (!aboutCoordsActive.size || !pubCoordsActive.size) {
+					 document.getElementById('linksStats').textContent =
+					     'No links: need both an "about" layer and the publication-places layer turned on, with at least one place plotted in each (check the language filter too).';
+					 return;
+				     }
+
+				     const [aLo, aHi] = currentAboutRange;
+				     const [pLo, pHi] = currentPubRange;
+				     const pairAgg = new Map(); // "geoname||place" -> {n, g, p, titles}
+
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+					 if (!showPub || r.pubY === null || r.pubY < pLo || r.pubY > pHi) continue;
+					 const pubHits = [];
+					 for (const place of r.pubP) if (pubCoordsActive.has(place)) pubHits.push(place);
+					 if (!pubHits.length) continue;
+
+					 const aboutHits = [];
+					 for (const m of r.about) {
+					     const isAncient = m.s < DATA.ancientCutoff;
+					     if (isAncient && !showAncient) continue;
+					     if (!isAncient && !showModern) continue;
+					     if (!(m.s <= aHi && m.e >= aLo)) continue;
+					     if (aboutCoordsActive.has(m.g)) aboutHits.push(m.g);
+					 }
+					 if (!aboutHits.length) continue;
+
+					 for (const g of aboutHits) {
+					     for (const p of pubHits) {
+						 const key = g + '||' + p;
+						 let acc = pairAgg.get(key);
+						 if (!acc) { acc = { n: 0, g, p, titles: [] }; pairAgg.set(key, acc); }
+						 acc.n++;
+						 if (r.title && acc.titles.length < 3 && !acc.titles.includes(r.title)) acc.titles.push(r.title);
+					     }
+					 }
+				     }
+
+				     const pairs = Array.from(pairAgg.values()).sort((a, b) => b.n - a.n);
+				     // A hard top-N cap silently hides real, single-record connections (e.g. a
+				     // location mentioned alongside Ukraine in just one book) behind a "top by
+				     // record count" cutoff -- exactly the pairs someone investigating an
+				     // isolated-looking point most wants to see. Since weight/opacity below
+				     // already scale down to a thin, dim line for low counts, there's no need
+				     // to hide anything at this dataset's actual scale (a few thousand pairs at
+				     // most): raise the ceiling well above that and only fall back to
+				     // truncating if some future data blows past it.
+				     const MAX_ARCS = 5000;
+				     const shown = pairs.slice(0, MAX_ARCS);
+				     const maxN = Math.max(1, ...shown.map(p => p.n));
+
+				     for (const pair of shown) {
+					 const pxy = pubCoordsActive.get(pair.p);
+					 const gxy = aboutCoordsActive.get(pair.g);
+					 if (!pxy || !gxy) continue;
+					 const frac = pair.n / maxN;
+					 const pts = computeArcPoints(pxy, gxy, 0.15, 48);
+					 const weight = 1 + 3.5 * frac;
+					 const opacity = 0.28 + 0.55 * frac;
+					 const line = L.polyline(pts, {
+					     color: '#f0b429', weight, opacity, interactive: true, className: 'link-arc'
+					 });
+					 const titlesHtml = pair.titles.map(t => '&ldquo;' + escapeHtml(t) + '&rdquo;<br>').join('');
+					 line.bindTooltip(
+					     '<b>' + escapeHtml(pair.p) + '</b> → <b>' + escapeHtml(pair.g) + '</b><br>' +
+						 pair.n + ' record(s)<br>' + titlesHtml,
+					     { sticky: true, direction: 'top', className: 'link-tooltip' }
+					 );
+					 line.on('mouseover', function () { this.setStyle({ color: '#ffd873', opacity: 1 }); });
+					 line.on('mouseout', function () { this.setStyle({ color: '#f0b429', weight, opacity }); });
+					 line.addTo(linksLayer);
+				     }
+
+				     const droppedNote = pairs.length > shown.length
+				           ? ' (of ' + pairs.length + ' total pairs — showing the top ' + MAX_ARCS + ' by record count)'
+				           : '';
+				     document.getElementById('linksStats').textContent = shown.length + ' link(s) shown' + droppedNote + '.';
+				 }
+
+				 function scheduleLinksUpdate() {
+				     clearTimeout(linksDebounceTimer);
+				     linksDebounceTimer = setTimeout(renderLinks, 150);
+				 }
+
+				 // --- link arcs: subject place <-> subject place, for records currently ---
+				 // ABOUT two or more currently-plotted places at once (a co-occurrence
+				 // network, independent of publication places) -----------------------------
+				 const geoLinksLayer = L.layerGroup(); // opt-in overlay, not added to map by default
+				 function renderGeoLinks() {
+				     geoLinksLayer.clearLayers();
+				     if (!document.getElementById('toggleGeoLinks').checked) {
+					 document.getElementById('geoLinksStats').textContent = '';
+					 return;
+				     }
+				     const showModern = document.getElementById('toggleModern').checked;
+				     const showAncient = document.getElementById('toggleAncient').checked;
+
+				     const aboutCoordsActive = new Map();
+				     if (showModern) for (const [k, v] of modernGeonameCoords) aboutCoordsActive.set(k, v);
+				     if (showAncient) for (const [k, v] of ancientGeonameCoords) aboutCoordsActive.set(k, v);
+
+				     if (aboutCoordsActive.size < 2) {
+					 document.getElementById('geoLinksStats').textContent =
+					     'No links: need an "about" layer turned on with 2+ places plotted (check the language filter too).';
+					 return;
+				     }
+
+				     const [aLo, aHi] = currentAboutRange;
+				     const pairAgg = new Map(); // "placeA||placeB" (alphabetically sorted) -> {n, a, b, titles}
+
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+					 const aboutHits = [];
+					 const seen = new Set();
+					 for (const m of r.about) {
+					     const isAncient = m.s < DATA.ancientCutoff;
+					     if (isAncient && !showAncient) continue;
+					     if (!isAncient && !showModern) continue;
+					     if (!(m.s <= aHi && m.e >= aLo)) continue;
+					     if (aboutCoordsActive.has(m.g) && !seen.has(m.g)) { seen.add(m.g); aboutHits.push(m.g); }
+					 }
+					 if (aboutHits.length < 2) continue;
+
+					 for (let i = 0; i < aboutHits.length; i++) {
+					     for (let j = i + 1; j < aboutHits.length; j++) {
+						 const a = aboutHits[i] < aboutHits[j] ? aboutHits[i] : aboutHits[j];
+						 const b = aboutHits[i] < aboutHits[j] ? aboutHits[j] : aboutHits[i];
+						 const key = a + '||' + b;
+						 let acc = pairAgg.get(key);
+						 if (!acc) { acc = { n: 0, a, b, titles: [] }; pairAgg.set(key, acc); }
+						 acc.n++;
+						 if (r.title && acc.titles.length < 3 && !acc.titles.includes(r.title)) acc.titles.push(r.title);
+					     }
+					 }
+				     }
+
+				     const pairs = Array.from(pairAgg.values()).sort((a, b) => b.n - a.n);
+				     // Same reasoning as renderLinks() above: don't hide genuine rare
+				     // co-occurrences (like a single shared book) behind a top-N cutoff -- they
+				     // already render thin and dim via the weight/opacity scaling below.
+				     const MAX_ARCS = 5000;
+				     const shown = pairs.slice(0, MAX_ARCS);
+				     const maxN = Math.max(1, ...shown.map(p => p.n));
+
+				     for (const pair of shown) {
+					 const axy = aboutCoordsActive.get(pair.a);
+					 const bxy = aboutCoordsActive.get(pair.b);
+					 if (!axy || !bxy) continue;
+					 const frac = pair.n / maxN;
+					 const pts = computeArcPoints(axy, bxy, 0.15, 48);
+					 const weight = 1 + 3.5 * frac;
+					 const opacity = 0.28 + 0.55 * frac;
+					 const line = L.polyline(pts, {
+					     color: '#38bdf8', weight, opacity, interactive: true, className: 'geo-link-arc'
+					 });
+					 const titlesHtml = pair.titles.map(t => '&ldquo;' + escapeHtml(t) + '&rdquo;<br>').join('');
+					 line.bindTooltip(
+					     '<b>' + escapeHtml(pair.a) + '</b> ↔ <b>' + escapeHtml(pair.b) + '</b><br>' +
+						 pair.n + ' record(s) mention both<br>' + titlesHtml,
+					     { sticky: true, direction: 'top', className: 'link-tooltip' }
+					 );
+					 line.on('mouseover', function () { this.setStyle({ color: '#bae6fd', opacity: 1 }); });
+					 line.on('mouseout', function () { this.setStyle({ color: '#38bdf8', weight, opacity }); });
+					 line.addTo(geoLinksLayer);
+				     }
+
+				     const droppedNote = pairs.length > shown.length
+				           ? ' (of ' + pairs.length + ' total pairs — showing the top ' + MAX_ARCS + ' by record count)'
+				           : '';
+				     document.getElementById('geoLinksStats').textContent = shown.length + ' link(s) shown' + droppedNote + '.';
+				 }
+
+				 function scheduleGeoLinksUpdate() {
+				     clearTimeout(geoLinksDebounceTimer);
+				     geoLinksDebounceTimer = setTimeout(renderGeoLinks, 150);
+				 }
+
+				 // --- link arcs: publication place <-> publication place, a PROJECTION of --
+				 // the bipartite graph between publication places and subject places (same
+				 // projection used for the publication-place <-> publication-place edges in
+				 // buildNetworkGraph below -- see its header comment). Only exposed in the UI
+				 // (see updatePubLinksAvailability) when publication places are shown ALONE
+				 // -- with subject places also on screen, the publication<->subject arcs
+				 // above already show the richer direct picture, and this one would just add
+				 // clutter on top of it.
+				 const pubLinksLayer = L.layerGroup(); // opt-in overlay, not added to map by default
+				 function renderPubLinks() {
+				     pubLinksLayer.clearLayers();
+				     const toggle = document.getElementById('togglePubLinks');
+				     if (!toggle || !toggle.checked) {
+					 document.getElementById('pubLinksStats').textContent = '';
+					 return;
+				     }
+				     const showPub = document.getElementById('togglePubs').checked;
+				     if (!showPub || pubPlaceCoordsActive.size < 2) {
+					 document.getElementById('pubLinksStats').textContent =
+					     'No links: need the publication-places layer turned on with 2+ places plotted (check the language filter too).';
+					 return;
+				     }
+
+				     // Bridge data is the full subject-place universe, independent of the
+				     // modern/ancient toggles -- see buildNetworkGraph's header comment for why.
+				     const bridgeAboutCoords = new Map([...modernGeonameCoords, ...ancientGeonameCoords]);
+				     const [aLo, aHi] = currentAboutRange;
+				     const [pLo, pHi] = currentPubRange;
+				     const pubNeighborAbouts = new Map(); // publication place -> Map(subject place -> weight)
+
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+					 if (r.pubY === null || r.pubY < pLo || r.pubY > pHi) continue;
+					 const pubHits = [];
+					 for (const place of r.pubP) if (pubPlaceCoordsActive.has(place)) pubHits.push(place);
+					 if (!pubHits.length) continue;
+
+					 const bridgeHits = [];
+					 const seen = new Set();
+					 for (const m of r.about) {
+					     if (!(m.s <= aHi && m.e >= aLo)) continue;
+					     if (!bridgeAboutCoords.has(m.g) || seen.has(m.g)) continue;
+					     seen.add(m.g); bridgeHits.push(m.g);
+					 }
+					 if (!bridgeHits.length) continue;
+
+					 for (const p of pubHits) {
+					     let nbrs = pubNeighborAbouts.get(p);
+					     if (!nbrs) { nbrs = new Map(); pubNeighborAbouts.set(p, nbrs); }
+					     for (const g of bridgeHits) nbrs.set(g, (nbrs.get(g) || 0) + 1);
+					 }
+				     }
+
+				     // Project onto the publication-place side (Newman-style min-weight
+				     // projection: a shared subject marginal to either publisher contributes
+				     // less than one central to both).
+				     const pairs = [];
+				     const pubPlaces = Array.from(pubNeighborAbouts.keys());
+				     for (let i = 0; i < pubPlaces.length; i++) {
+					 const p1 = pubPlaces[i], nbrs1 = pubNeighborAbouts.get(p1);
+					 for (let j = i + 1; j < pubPlaces.length; j++) {
+					     const p2 = pubPlaces[j], nbrs2 = pubNeighborAbouts.get(p2);
+					     let weight = 0;
+					     const shared = [];
+					     for (const [g, w1] of nbrs1) {
+						 const w2 = nbrs2.get(g);
+						 if (w2 === undefined) continue;
+						 weight += Math.min(w1, w2);
+						 shared.push(g);
+					     }
+					     if (weight <= 0) continue;
+					     pairs.push({ p1, p2, weight, shared });
+					 }
+				     }
+
+				     if (!pairs.length) {
+					 document.getElementById('pubLinksStats').textContent =
+					     'No links: no two publication places currently share a subject place in this range (check the language filter too).';
+					 return;
+				     }
+
+				     pairs.sort((a, b) => b.weight - a.weight);
+				     // Same reasoning as the other link overlays: don't hide genuine rare ties
+				     // behind a top-N cutoff -- they already render thin and dim below.
+				     const MAX_ARCS = 5000;
+				     const shown = pairs.slice(0, MAX_ARCS);
+				     const maxW = Math.max(1, ...shown.map(p => p.weight));
+
+				     for (const pair of shown) {
+					 const pxy = pubPlaceCoordsActive.get(pair.p1);
+					 const qxy = pubPlaceCoordsActive.get(pair.p2);
+					 if (!pxy || !qxy) continue;
+					 const frac = pair.weight / maxW;
+					 const pts = computeArcPoints(pxy, qxy, 0.15, 48);
+					 const weight = 1 + 3.5 * frac;
+					 const opacity = 0.28 + 0.55 * frac;
+					 const line = L.polyline(pts, {
+					     color: '#c77dff', weight, opacity, interactive: true, className: 'pub-link-arc'
+					 });
+					 const sharedHtml = pair.shared.slice(0, 5).map(g => escapeHtml(g)).join(', ') +
+					       (pair.shared.length > 5 ? ', …' : '');
+					 line.bindTooltip(
+					     '<b>' + escapeHtml(pair.p1) + '</b> ↔ <b>' + escapeHtml(pair.p2) + '</b><br>' +
+						 'Projected weight ' + pair.weight.toFixed(1) + ' via ' + pair.shared.length + ' shared subject place(s)<br>' +
+						 sharedHtml,
+					     { sticky: true, direction: 'top', className: 'link-tooltip' }
+					 );
+					 line.on('mouseover', function () { this.setStyle({ color: '#e6c9ff', opacity: 1 }); });
+					 line.on('mouseout', function () { this.setStyle({ color: '#c77dff', weight, opacity }); });
+					 line.addTo(pubLinksLayer);
+				     }
+
+				     const droppedNote = pairs.length > shown.length
+				           ? ' (of ' + pairs.length + ' total pairs — showing the top ' + MAX_ARCS + ' by projected weight)'
+				           : '';
+				     document.getElementById('pubLinksStats').textContent = shown.length + ' link(s) shown' + droppedNote + '.';
+				 }
+
+				 function schedulePubLinksUpdate() {
+				     clearTimeout(pubLinksDebounceTimer);
+				     pubLinksDebounceTimer = setTimeout(renderPubLinks, 150);
+				 }
+
+				 // Only makes the toggle above usable when publication places are shown
+				 // ALONE (temporal aboutness fully off) -- per the requested scope. Hides the
+				 // whole control section otherwise, and cleanly turns the overlay back off
+				 // if it was on when the user re-enables an "about" sub-layer.
+				 function updatePubLinksAvailability() {
+				     const showAbout = document.getElementById('toggleModern').checked || document.getElementById('toggleAncient').checked;
+				     const showPub = document.getElementById('togglePubs').checked;
+				     const available = showPub && !showAbout;
+				     const section = document.getElementById('pubLinksSection');
+				     if (!section) return;
+				     section.style.display = available ? 'block' : 'none';
+				     if (!available) {
+					 const toggle = document.getElementById('togglePubLinks');
+					 if (toggle && toggle.checked) {
+					     toggle.checked = false;
+					     map.removeLayer(pubLinksLayer);
+					     document.getElementById('pubLinksStats').textContent = '';
+					 }
+				     }
+				 }
+
+				 // ===================================================== network view =====
+				 // A node-link graph combining TWO relationships, with community detection so
+				 // places that cluster together (by either relationship) get colored
+				 // together:
+				 //   - subject <-> subject co-occurrence (same as the geo-links arc overlay,
+				 //     renderGeoLinks above) -- active whenever the "temporal aboutness"
+				 //     layer (modern and/or ancient) is on.
+				 //   - publication place <-> publication place, a PROJECTION of the bipartite
+				 //     graph between publication places and subject places onto the
+				 //     publication-place side: two publishers are linked if they've written
+				 //     about the same subject place(s), weighted by how strongly each is
+				 //     tied to the shared subject. Active whenever the publication-place
+				 //     layer is on. This projection always uses the full subject-place
+				 //     universe as its bridge, even if the "temporal aboutness" nodes
+				 //     themselves are currently hidden -- turning that layer off hides its
+				 //     NODES, it doesn't erase the underlying subject data the projection is
+				 //     calculated from.
+				 //   - when BOTH layers are on, a third edge type directly connects a
+				 //     publication place to a subject place it actually published about, so
+				 //     the two node types sit in one genuinely blended graph rather than two
+				 //     disconnected halves that just happen to share a color palette.
+				 // Same about-range slider, same pub-range slider, same modern/ancient
+				 // toggles, same language filter as everywhere else on this page -- just
+				 // combined into one force-directed graph instead of two separate sets of
+				 // arcs over real geography.
+
+				 function buildNetworkGraph() {
+				     const showModern = document.getElementById('toggleModern').checked;
+				     const showAncient = document.getElementById('toggleAncient').checked;
+				     const showAbout = showModern || showAncient;
+				     const showPub = document.getElementById('togglePubs').checked;
+
+				     if (!showAbout && !showPub) {
+					 return { nodes: [], edges: [], message: 'Need at least one layer turned on (Temporal aboutness and/or Year of publication) with 2+ places plotted -- check the language filter too.' };
+				     }
+
+				     const aboutCoordsActive = new Map();
+				     if (showModern) for (const [k, v] of modernGeonameCoords) aboutCoordsActive.set(k, v);
+				     if (showAncient) for (const [k, v] of ancientGeonameCoords) aboutCoordsActive.set(k, v);
+				     // Full subject-place universe, independent of the modern/ancient toggles --
+				     // see the "publication place <-> publication place" bullet above.
+				     const bridgeAboutCoords = new Map([...modernGeonameCoords, ...ancientGeonameCoords]);
+				     const pubCoordsActive = showPub ? pubPlaceCoordsActive : new Map();
+
+				     const [aLo, aHi] = currentAboutRange;
+				     const [pLo, pHi] = currentPubRange;
+
+				     const aboutNodeAgg = new Map();          // subject place -> node
+				     const pubNodeAgg = new Map();            // publication place -> node
+				     const aaEdgeAgg = new Map();             // subject <-> subject co-occurrence
+				     const paEdgeCandidates = new Map();      // publication <-> subject, direct bipartite (filtered below)
+				     const pubNeighborAbouts = new Map();     // publication place -> Map(subject place -> weight), the projection bridge
+
+				     for (const r of DATA.records) {
+					 if (!recordPassesLanguageFilter(r)) continue;
+
+					 const aboutHits = [];
+					 if (showAbout) {
+					     const seen = new Set();
+					     for (const m of r.about) {
+						 const isAncient = m.s < DATA.ancientCutoff;
+						 if (isAncient && !showAncient) continue;
+						 if (!isAncient && !showModern) continue;
+						 if (!(m.s <= aHi && m.e >= aLo)) continue;
+						 if (aboutCoordsActive.has(m.g) && !seen.has(m.g)) { seen.add(m.g); aboutHits.push(m.g); }
+					     }
+					 }
+					 if (aboutHits.length >= 2) {
+					     for (const g of aboutHits) {
+						 let node = aboutNodeAgg.get(g);
+						 if (!node) { node = { id: g, type: 'about', n: 0, recordSet: new Set(), records: [] }; aboutNodeAgg.set(g, node); }
+						 node.n++;
+						 if (!node.recordSet.has(r.id)) { node.recordSet.add(r.id); node.records.push(r); }
+					     }
+					     for (let i = 0; i < aboutHits.length; i++) {
+						 for (let j = i + 1; j < aboutHits.length; j++) {
+						     const a = aboutHits[i], b = aboutHits[j];
+						     const key = a < b ? a + '||' + b : b + '||' + a;
+						     let e = aaEdgeAgg.get(key);
+						     if (!e) { e = { source: a < b ? a : b, target: a < b ? b : a, weight: 0, titles: [] }; aaEdgeAgg.set(key, e); }
+						     e.weight++;
+						     if (r.title && e.titles.length < 3 && !e.titles.includes(r.title)) e.titles.push(r.title);
+						 }
+					     }
+					 }
+
+					 if (!showPub || r.pubY === null || r.pubY < pLo || r.pubY > pHi) continue;
+					 const pubHits = [];
+					 for (const place of r.pubP) if (pubCoordsActive.has(place)) pubHits.push(place);
+					 if (!pubHits.length) continue;
+
+					 const bridgeHits = [];
+					 {
+					     const seen = new Set();
+					     for (const m of r.about) {
+						 if (!(m.s <= aHi && m.e >= aLo)) continue;
+						 if (!bridgeAboutCoords.has(m.g) || seen.has(m.g)) continue;
+						 seen.add(m.g); bridgeHits.push(m.g);
+					     }
+					 }
+					 if (!bridgeHits.length) continue;
+
+					 for (const p of pubHits) {
+					     let node = pubNodeAgg.get(p);
+					     if (!node) { node = { id: p, type: 'pub', n: 0, recordSet: new Set(), records: [] }; pubNodeAgg.set(p, node); }
+					     node.n++;
+					     if (!node.recordSet.has(r.id)) { node.recordSet.add(r.id); node.records.push(r); }
+
+					     let nbrs = pubNeighborAbouts.get(p);
+					     if (!nbrs) { nbrs = new Map(); pubNeighborAbouts.set(p, nbrs); }
+					     for (const g of bridgeHits) nbrs.set(g, (nbrs.get(g) || 0) + 1);
+
+					     if (showAbout) {
+						 for (const g of bridgeHits) {
+						     if (!aboutCoordsActive.has(g)) continue;
+						     const key = p + '||' + g;
+						     let e = paEdgeCandidates.get(key);
+						     if (!e) { e = { source: p, target: g, weight: 0, titles: [] }; paEdgeCandidates.set(key, e); }
+						     e.weight++;
+						     if (r.title && e.titles.length < 3 && !e.titles.includes(r.title)) e.titles.push(r.title);
+						 }
+					     }
+					 }
+				     }
+
+				     // Only keep a direct publication<->subject edge whose subject endpoint is
+				     // an actual node (i.e. it also co-occurs with some OTHER subject place --
+				     // the aboutHits.length >= 2 rule above); otherwise the edge would dangle
+				     // onto a place with no node to attach to.
+				     const paEdgeAgg = new Map();
+				     for (const [key, e] of paEdgeCandidates) if (aboutNodeAgg.has(e.target)) paEdgeAgg.set(key, e);
+
+				     // Project the publication<->subject bipartite graph onto the publication-
+				     // place side (Newman-style min-weight projection: a shared subject that's
+				     // marginal to either publisher contributes less than one central to both).
+				     const ppEdgeAgg = new Map();
+				     if (showPub) {
+					 const pubPlaces = Array.from(pubNeighborAbouts.keys());
+					 for (let i = 0; i < pubPlaces.length; i++) {
+					     const p1 = pubPlaces[i], nbrs1 = pubNeighborAbouts.get(p1);
+					     for (let j = i + 1; j < pubPlaces.length; j++) {
+						 const p2 = pubPlaces[j], nbrs2 = pubNeighborAbouts.get(p2);
+						 let weight = 0;
+						 for (const [g, w1] of nbrs1) {
+						     const w2 = nbrs2.get(g);
+						     if (w2 !== undefined) weight += Math.min(w1, w2);
+						 }
+						 if (weight <= 0) continue;
+						 const key = p1 + '||' + p2;
+						 ppEdgeAgg.set(key, { source: p1, target: p2, weight, titles: [] });
+					     }
+					 }
+				     }
+
+				     // Match the about-side rule: a place with nothing to connect to
+				     // contributes no node, applied uniformly across both node types.
+				     const connectedPubIds = new Set();
+				     for (const e of ppEdgeAgg.values()) { connectedPubIds.add(e.source); connectedPubIds.add(e.target); }
+				     for (const e of paEdgeAgg.values()) connectedPubIds.add(e.source);
+
+				     const nodes = [
+					 ...aboutNodeAgg.values(),
+					 ...Array.from(pubNodeAgg.values()).filter(n => connectedPubIds.has(n.id)),
+				     ];
+				     const edges = [...aaEdgeAgg.values(), ...ppEdgeAgg.values(), ...paEdgeAgg.values()];
+
+				     if (!nodes.length) {
+					 const message = showAbout && showPub
+					       ? 'No shared connections to plot -- need 2+ subject places co-occurring in a record, or 2+ publication places sharing a subject, within the current filters.'
+					       : showPub
+					       ? 'No projected publication-place network -- need 2+ publication places that write about at least one shared subject place (check the language filter and date ranges).'
+					       : 'Need an "about" layer turned on (Temporal aboutness and/or Ancient/medieval) with 2+ places plotted -- check the language filter too.';
+					 return { nodes: [], edges: [], message };
+				     }
+
+				     return { nodes, edges };
+				 }
+
+				 // Single-level greedy modularity optimization (the "local moving" phase of
+				 // the Louvain method): repeatedly move each node into whichever neighboring
+				 // community most increases modularity, until nothing moves. This is the
+				 // standard, well-understood core of Louvain community detection; skipping
+				 // the multi-level graph-coarsening refinement pass keeps the implementation
+				 // small and is more than adequate at this graph's size (low hundreds of
+				 // nodes) -- it converges in a handful of passes.
+				 function detectCommunities(nodeIds, edges) {
+				     const N = nodeIds.length;
+				     const result = new Map();
+				     if (!N) return result;
+				     const idx = new Map(nodeIds.map((id, i) => [id, i]));
+				     const adj = Array.from({ length: N }, () => new Map());
+				     let m2 = 0;
+				     for (const e of edges) {
+					 const a = idx.get(e.source), b = idx.get(e.target);
+					 if (a === undefined || b === undefined || a === b) continue;
+					 adj[a].set(b, (adj[a].get(b) || 0) + e.weight);
+					 adj[b].set(a, (adj[b].get(a) || 0) + e.weight);
+					 m2 += 2 * e.weight;
+				     }
+				     const k = new Array(N).fill(0);
+				     for (let i = 0; i < N; i++) for (const w of adj[i].values()) k[i] += w;
+				     if (m2 === 0) { nodeIds.forEach((id, i) => result.set(id, i)); return result; }
+
+				     const comm = new Array(N);
+				     const commTotDegree = new Array(N).fill(0);
+				     for (let i = 0; i < N; i++) { comm[i] = i; commTotDegree[i] = k[i]; }
+
+				     let improved = true, pass = 0;
+				     while (improved && pass < 100) {
+					 improved = false; pass++;
+					 for (let i = 0; i < N; i++) {
+					     const ci = comm[i];
+					     commTotDegree[ci] -= k[i];
+					     const neighborWeights = new Map();
+					     for (const [j, w] of adj[i]) {
+						 const cj = comm[j];
+						 neighborWeights.set(cj, (neighborWeights.get(cj) || 0) + w);
+					     }
+					     let bestC = ci;
+					     let bestGain = (neighborWeights.get(ci) || 0) - (k[i] * commTotDegree[ci]) / m2;
+					     for (const [cId, wSum] of neighborWeights) {
+						 if (cId === ci) continue;
+						 const gain = wSum - (k[i] * commTotDegree[cId]) / m2;
+						 if (gain > bestGain) { bestGain = gain; bestC = cId; }
+					     }
+					     comm[i] = bestC;
+					     commTotDegree[bestC] += k[i];
+					     if (bestC !== ci) improved = true;
+					 }
+				     }
+
+				     // Relabel to consecutive ids, ordered by community size (largest first)
+				     // so color assignment is stable-ish and the biggest cluster reads as #1.
+				     const sizeByRaw = new Map();
+				     for (const c of comm) sizeByRaw.set(c, (sizeByRaw.get(c) || 0) + 1);
+				     const order = Array.from(sizeByRaw.keys()).sort((a, b) => sizeByRaw.get(b) - sizeByRaw.get(a));
+				     const relabel = new Map(order.map((raw, i) => [raw, i]));
+				     nodeIds.forEach((id, i) => result.set(id, relabel.get(comm[i])));
+				     return result;
+				 }
+
+				 const NETWORK_PALETTE = [].concat(d3.schemeTableau10, d3.schemeSet3, d3.schemeAccent, d3.schemePastel1);
+				 function communityColor(c) { return NETWORK_PALETTE[c % NETWORK_PALETTE.length]; }
+
+				 // Modularity (Q): how much more internal edge weight each community has
+				 // than a random graph with the same node degrees would predict, summed
+				 // across all communities. Standard formula: Q = sum_c [ internal_c/m -
+				 // (totalDegree_c / 2m)^2 ], m = total edge weight (single-counted).
+				 // Ranges roughly -0.5..1; > ~0.3 is the usual rule-of-thumb threshold for
+				 // "this partition reflects real structure, not noise."
+				 function computeModularityStats(nodeIds, edges, commMap) {
+				     let m = 0;
+				     for (const e of edges) m += e.weight;
+				     const degree = new Map(nodeIds.map(id => [id, 0]));
+				     for (const e of edges) {
+					 degree.set(e.source, (degree.get(e.source) || 0) + e.weight);
+					 degree.set(e.target, (degree.get(e.target) || 0) + e.weight);
+				     }
+				     const byId = new Map();
+				     for (const id of nodeIds) {
+					 const c = commMap.get(id);
+					 let agg = byId.get(c);
+					 if (!agg) { agg = { id: c, internal: 0, totalDegree: 0, members: [] }; byId.set(c, agg); }
+					 agg.totalDegree += degree.get(id) || 0;
+					 agg.members.push(id);
+				     }
+				     const m2 = 2 * m;
+				     let Q = 0;
+				     for (const e of edges) {
+					 const cu = commMap.get(e.source), cv = commMap.get(e.target);
+					 if (m > 0 && cu === cv) byId.get(cu).internal += e.weight;
+				     }
+				     for (const agg of byId.values()) {
+					 agg.members.sort();
+					 agg.modularityShare = m > 0 ? (agg.internal / m - Math.pow(agg.totalDegree / m2, 2)) : 0;
+					 Q += agg.modularityShare;
+				     }
+				     const communities = Array.from(byId.values()).sort((a, b) => b.members.length - a.members.length);
+				     return { modularity: Q, communities };
+				 }
+
+				 // Core/periphery via k-core decomposition (graph degeneracy ordering): a
+				 // place's "coreness" is the largest k for which it survives in a subgraph
+				 // where every member has at least k connections *within that subgraph*.
+				 // Classic Seidman (1983) peeling algorithm, unweighted (edge presence only,
+				 // not co-occurrence count) -- repeatedly strip whatever's left with degree
+				 // <= the current k, raise k to the new minimum, repeat. High coreness =
+				 // sits inside a densely, mutually-reinforcing cluster (the "core"); coreness
+				 // 0-1 = hangs off the network by a single link with nothing backing it up
+				 // ("periphery").
+				 function computeCoreNumbers(nodeIds, edges) {
+				     const core = new Map();
+				     if (!nodeIds.length) return core;
+				     const neighbors = new Map(nodeIds.map(id => [id, new Set()]));
+				     for (const e of edges) {
+					 if (!neighbors.has(e.source) || !neighbors.has(e.target) || e.source === e.target) continue;
+					 neighbors.get(e.source).add(e.target);
+					 neighbors.get(e.target).add(e.source);
+				     }
+				     const degree = new Map(nodeIds.map(id => [id, neighbors.get(id).size]));
+				     const remaining = new Set(nodeIds);
+				     let k = 0;
+				     while (remaining.size) {
+					 let peeledSomething = true;
+					 while (peeledSomething) {
+					     peeledSomething = false;
+					     for (const id of Array.from(remaining)) {
+						 if (degree.get(id) <= k) {
+						     core.set(id, k);
+						     remaining.delete(id);
+						     for (const nb of neighbors.get(id)) {
+							 if (remaining.has(nb)) degree.set(nb, degree.get(nb) - 1);
+						     }
+						     peeledSomething = true;
+						 }
+					     }
+					 }
+					 if (remaining.size) k = Math.min(...Array.from(remaining, id => degree.get(id)));
+				     }
+				     return core;
+				 }
+
+				 // Ego-network stats for a single place: its direct connections (weighted
+				 // adjacency), and the "local clustering coefficient" -- among its neighbors,
+				 // what fraction of possible pairs are *also* directly connected to each
+				 // other. High clustering = this place's neighborhood forms a tight little
+				 // cluster on its own; low/zero = its neighbors mostly don't know each other,
+				 // meaning this place is a broker/bridge stitching together otherwise-
+				 // separate parts of the network.
+				 function computeEgoStats(nodeId, adjacency) {
+				     const nbrs = adjacency.get(nodeId);
+				     if (!nbrs || nbrs.size === 0) return { degree: 0, clustering: null, topNeighbors: [] };
+				     const nbrIds = Array.from(nbrs.keys());
+				     let links = 0, possible = 0;
+				     for (let i = 0; i < nbrIds.length; i++) {
+					 for (let j = i + 1; j < nbrIds.length; j++) {
+					     possible++;
+					     const a = adjacency.get(nbrIds[i]);
+					     if (a && a.has(nbrIds[j])) links++;
+					 }
+				     }
+				     const topNeighbors = nbrIds.map(id => ({ id: id, weight: nbrs.get(id) }))
+				           .sort((a, b) => b.weight - a.weight);
+				     return { degree: nbrIds.length, clustering: possible > 0 ? links / possible : null, topNeighbors: topNeighbors };
+				 }
+
+				 // Betweenness centrality: for every pair of OTHER places, does the
+				 // shortest path between them run through this one? Summed across all
+				 // pairs and normalized to [0,1]. Unlike degree/coreness (both about how
+				 // *connected* a place is), this measures how much of a structural
+				 // shortcut/bridge it is -- a place with modest degree can still score high
+				 // here if the few connections it does have happen to stitch together parts
+				 // of the network that would otherwise route only through the dominant hub.
+				 // Standard Brandes (2001) algorithm, O(V*E) -- comfortably fast at this
+				 // graph's size (a few hundred nodes).
+				 function computeBetweenness(nodeIds, edges) {
+				     const betweenness = new Map(nodeIds.map(id => [id, 0]));
+				     if (nodeIds.length < 3) return betweenness;
+				     const adj = new Map(nodeIds.map(id => [id, []]));
+				     for (const e of edges) {
+					 if (!adj.has(e.source) || !adj.has(e.target) || e.source === e.target) continue;
+					 adj.get(e.source).push(e.target);
+					 adj.get(e.target).push(e.source);
+				     }
+				     for (const s of nodeIds) {
+					 const stack = [];
+					 const pred = new Map(nodeIds.map(id => [id, []]));
+					 const sigma = new Map(nodeIds.map(id => [id, 0]));
+					 const dist = new Map(nodeIds.map(id => [id, -1]));
+					 sigma.set(s, 1);
+					 dist.set(s, 0);
+					 const queue = [s];
+					 let qi = 0;
+					 while (qi < queue.length) {
+					     const v = queue[qi++];
+					     stack.push(v);
+					     for (const w of adj.get(v)) {
+						 if (dist.get(w) < 0) { dist.set(w, dist.get(v) + 1); queue.push(w); }
+						 if (dist.get(w) === dist.get(v) + 1) {
+						     sigma.set(w, sigma.get(w) + sigma.get(v));
+						     pred.get(w).push(v);
+						 }
+					     }
+					 }
+					 const delta = new Map(nodeIds.map(id => [id, 0]));
+					 while (stack.length) {
+					     const w = stack.pop();
+					     for (const v of pred.get(w)) {
+						 delta.set(v, delta.get(v) + (sigma.get(v) / sigma.get(w)) * (1 + delta.get(w)));
+					     }
+					     if (w !== s) betweenness.set(w, betweenness.get(w) + delta.get(w));
+					 }
+				     }
+				     // Undirected graph: every pair got counted from both endpoints as source.
+				     // Normalize by the number of node pairs not involving the node itself,
+				     // (n-1)(n-2)/2, matching the standard normalized-betweenness convention.
+				     const n = nodeIds.length;
+				     const norm = (n - 1) * (n - 2) / 2;
+				     const normalized = new Map();
+				     for (const id of nodeIds) normalized.set(id, norm > 0 ? (betweenness.get(id) / 2) / norm : 0);
+				     return normalized;
+				 }
+
+				 let networkNodesSel = null, networkLinksSel = null, networkLabelsSel = null;
+				 let networkNodeById = new Map();
+				 let networkCommunityStats = [];
+				 let networkModularity = 0;
+				 let selectedCommunity = null;
+
+				 // Single source of truth for community membership -- called from the same
+				 // debounced trigger whether the Network view is on screen, the map's
+				 // "color by community" toggle is on, both, or (soon) neither, so a place
+				 // is always assigned to the same community and color everywhere it shows up.
+				 function updateCommunityAssignments() {
+				     const { nodes, edges, message } = buildNetworkGraph();
+				     networkGraphNodes = nodes;
+				     networkGraphEdges = edges;
+				     networkMessage = message || '';
+				     if (!nodes.length) {
+					 communityByName = new Map();
+					 networkCommunityStats = [];
+					 networkModularity = 0;
+					 networkNodeById = new Map();
+					 networkCoreNumbers = new Map();
+					 networkAdjacency = new Map();
+					 networkMaxCore = 0;
+					 networkBetweenness = new Map();
+					 return;
+				     }
+				     const nodeIds = nodes.map(n => n.id);
+				     const commMap = detectCommunities(nodeIds, edges);
+				     nodes.forEach(n => { n.community = commMap.get(n.id) || 0; });
+				     communityByName = commMap;
+				     networkNodeById = new Map(nodes.map(n => [n.id, n]));
+				     const stats = computeModularityStats(nodeIds, edges, commMap);
+				     networkModularity = stats.modularity;
+				     networkCommunityStats = stats.communities;
+
+				     networkCoreNumbers = computeCoreNumbers(nodeIds, edges);
+				     nodes.forEach(n => { n.coreNumber = networkCoreNumbers.get(n.id) || 0; });
+				     networkMaxCore = nodeIds.length ? Math.max(...networkCoreNumbers.values()) : 0;
+
+				     networkAdjacency = new Map(nodeIds.map(id => [id, new Map()]));
+				     for (const e of edges) {
+					 if (!networkAdjacency.has(e.source) || !networkAdjacency.has(e.target)) continue;
+					 networkAdjacency.get(e.source).set(e.target, e.weight);
+					 networkAdjacency.get(e.target).set(e.source, e.weight);
+				     }
+
+				     networkBetweenness = computeBetweenness(nodeIds, edges);
+				     nodes.forEach(n => { n.betweenness = networkBetweenness.get(n.id) || 0; });
+				 }
+
+				 // Used at Leaflet marker creation/recolor time -- falls back to the normal
+				 // modern/ancient color whenever "color by community" is off, a place isn't
+				 // in the currently-detected graph (e.g. it never co-occurs with anything),
+				 // or communities haven't been computed yet.
+				 function communityFillFor(name, fallback) {
+				     const toggle = document.getElementById('toggleCommunityColor');
+				     if (!toggle || !toggle.checked) return fallback;
+				     const cid = communityByName.get(name);
+				     return cid !== undefined ? communityColor(cid) : fallback;
+				 }
+
+				 // Re-colors/dims already-drawn map markers in place (no re-aggregation, no
+				 // call back into renderModernRange/renderAncient/renderPubRange) so this can
+				 // safely run from inside their own debounced update without looping. Covers
+				 // all three point layers -- subject-place markers key off m.geonameId,
+				 // publication-place markers off m.placeId -- since the network graph and
+				 // its communities now span both.
+				 function applyMapCommunityColors() {
+				     for (const layer of [modernLayer, ancientLayer, pubLayer]) {
+					 layer.eachLayer(m => {
+					     const key = m.geonameId !== undefined ? m.geonameId : m.placeId;
+					     if (key === undefined) return;
+					     m.setStyle({ fillColor: communityFillFor(key, m._dkOrigFillColor || '#4fa3ff') });
+					 });
+				     }
+				 }
+
+				 function networkDragBehavior(sim) {
+				     function started(event, d) {
+					 if (!event.active) sim.alphaTarget(0.25).restart();
+					 d.fx = d.x; d.fy = d.y;
+				     }
+				     function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+				     function ended(event, d) {
+					 if (!event.active) sim.alphaTarget(0);
+					 d.fx = null; d.fy = null;
+				     }
+				     return d3.drag().on('start', started).on('drag', dragged).on('end', ended);
+				 }
+
+				 function networkHighlight(nodeId) {
+				     const neighbors = new Set([nodeId]);
+				     networkLinksSel.each(function (d) {
+					 if (d.source.id === nodeId) neighbors.add(d.target.id);
+					 if (d.target.id === nodeId) neighbors.add(d.source.id);
+				     });
+				     networkNodesSel.classed('dimmed', d => !neighbors.has(d.id));
+				     networkLabelsSel.classed('dimmed', d => !neighbors.has(d.id));
+				     networkLinksSel.classed('dimmed', d => d.source.id !== nodeId && d.target.id !== nodeId);
+				 }
+				 function networkClearHighlight() {
+				     networkNodesSel.classed('dimmed', false);
+				     networkLabelsSel.classed('dimmed', false);
+				     networkLinksSel.classed('dimmed', false);
+				 }
+
+				 // --- exploring a single community: dims everything outside it (sticky,
+				 // unlike the hover highlight above). Works on whichever view is showing --
+				 // the Network graph (SVG classes) or the Map (Leaflet marker restyling +
+				 // fitBounds), using the same selectedCommunity/communityByName either way.
+				 function applyCommunityFilter() {
+				     if (mainView === 'network') {
+					 if (!networkNodesSel) return;
+					 if (selectedCommunity === null) { networkClearHighlight(); return; }
+					 networkNodesSel.classed('dimmed', d => d.community !== selectedCommunity);
+					 networkLabelsSel.classed('dimmed', d => d.community !== selectedCommunity);
+					 networkLinksSel.classed('dimmed', d => d.source.community !== selectedCommunity || d.target.community !== selectedCommunity);
+					 return;
+				     }
+				     const matchedPts = [];
+				     for (const layer of [modernLayer, ancientLayer, pubLayer]) {
+					 layer.eachLayer(m => {
+					     const key = m.geonameId !== undefined ? m.geonameId : m.placeId;
+					     if (key === undefined) return;
+					     const fallbackFillOp = m._dkOrigFillOpacity !== undefined ? m._dkOrigFillOpacity : 0.65;
+					     if (selectedCommunity === null) {
+						 m.setStyle({ opacity: 1, fillOpacity: fallbackFillOp });
+						 return;
+					     }
+					     const match = communityByName.get(key) === selectedCommunity;
+					     m.setStyle({ opacity: match ? 1 : 0.12, fillOpacity: match ? fallbackFillOp : 0.05 });
+					     if (match) matchedPts.push(m.getLatLng());
+					 });
+				     }
+				     if (selectedCommunity !== null && matchedPts.length) {
+					 map.fitBounds(L.latLngBounds(matchedPts), { padding: [40, 40], maxZoom: 8 });
+				     }
+				 }
+
+				 function renderCommunityDetail() {
+				     const el = document.getElementById('communityDetail');
+				     if (selectedCommunity === null) { el.style.display = 'none'; el.innerHTML = ''; return; }
+				     const c = networkCommunityStats.find(c => c.id === selectedCommunity);
+				     if (!c) { el.style.display = 'none'; el.innerHTML = ''; return; }
+				     el.style.display = 'block';
+				     const chips = c.members.map(name =>
+					 '<span data-name="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span>'
+				     ).join('');
+				     el.innerHTML =
+					 '<b>Community ' + (c.id + 1) + '</b> &middot; ' + c.members.length + ' place(s), ' +
+					 c.internal + ' internal link(s)<br>' +
+					 'Modularity contribution: ' + c.modularityShare.toFixed(3) + ' of ' + networkModularity.toFixed(3) + ' total<br>' +
+					 '<div class="members">' + chips + '</div>';
+				     el.querySelectorAll('.members span').forEach(chip => {
+					 chip.addEventListener('click', () => {
+					     const node = networkNodeById.get(chip.dataset.name);
+					     if (node) pinLocation(node.id, node.records);
+					 });
+				     });
+				 }
+
+				 function selectCommunity(commId) {
+				     selectedCommunity = (selectedCommunity === commId) ? null : commId;
+				     applyCommunityFilter();
+				     renderCommunityList();
+				     renderCommunityDetail();
+				     if (mainView !== 'network' || selectedCommunity === null || !networkNodesSel) return;
+				     const members = networkNodesSel.data().filter(d => d.community === selectedCommunity);
+				     if (!members.length) return;
+				     const xs = members.map(d => d.x), ys = members.map(d => d.y);
+				     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+				     const container = document.getElementById('networkContainer');
+				     const width = container.clientWidth, height = container.clientHeight;
+				     const dx = Math.max(80, maxX - minX), dy = Math.max(80, maxY - minY);
+				     const scale = Math.max(0.15, Math.min(4, 0.8 / Math.max(dx / width, dy / height)));
+				     const tx = width / 2 - scale * (minX + maxX) / 2;
+				     const ty = height / 2 - scale * (minY + maxY) / 2;
+				     if (networkZoomBehavior) {
+					 d3.select('#networkSvg').transition().duration(500)
+					     .call(networkZoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+				     }
+				 }
+
+				 function renderCommunityList() {
+				     const listEl = document.getElementById('communityList');
+				     listEl.innerHTML = networkCommunityStats.map(c => {
+					 const preview = c.members.slice(0, 4).join(', ') + (c.members.length > 4 ? ', …' : '');
+					 const active = selectedCommunity === c.id ? ' active' : '';
+					 return '<div class="community-row' + active + '" data-comm="' + c.id + '">' +
+					     '<span class="community-swatch" style="background:' + communityColor(c.id) + '"></span>' +
+					     '<span class="community-name">#' + (c.id + 1) + ' (' + c.members.length + ')</span>' +
+					     '<span class="community-preview" title="' + escapeHtml(c.members.join(', ')) + '">' + escapeHtml(preview) + '</span>' +
+					     '</div>';
+				     }).join('');
+				     listEl.querySelectorAll('.community-row').forEach(row => {
+					 row.addEventListener('click', () => selectCommunity(parseInt(row.dataset.comm, 10)));
+				     });
+				 }
+
+				 // Betweenness ("structural bridge") leaderboard -- independent of the
+				 // community list above (a place doesn't need to be in a small/interesting
+				 // community to be a critical bridge; the dominant hub, if there is one,
+				 // usually tops this trivially since almost every shortest path runs
+				 // through it -- worth scanning past for smaller places punching above
+				 // their raw connection count).
+				 function renderBridgeList() {
+				     const el = document.getElementById('bridgeList');
+				     if (!el) return;
+				     const ranked = networkGraphNodes.slice().sort((a, b) => (b.betweenness || 0) - (a.betweenness || 0)).slice(0, 10);
+				     el.innerHTML = ranked.map((n, i) => {
+					 const deg = networkAdjacency.get(n.id) ? networkAdjacency.get(n.id).size : 0;
+					 return '<div class="community-row" data-name="' + escapeHtml(n.id) + '">' +
+					     '<span class="community-name">#' + (i + 1) + '</span>' +
+					     '<span class="community-preview">' + escapeHtml(n.id) + ' — betweenness ' + (n.betweenness || 0).toFixed(4) +
+					     ', ' + deg + ' connection(s), ' + n.n + ' record(s)</span></div>';
+				     }).join('');
+				     el.querySelectorAll('.community-row').forEach(row => {
+					 row.addEventListener('click', () => {
+					     const node = networkNodeById.get(row.dataset.name);
+					     if (node) pinLocation(node.id, node.records);
+					 });
+				     });
+				 }
+
+				 // Shared by both views: reflects whatever updateCommunityAssignments() last
+				 // found, whether that was triggered by opening the Network view or by
+				 // turning on the map's "color by community" toggle.
+				 function updateNetworkStatsText() {
+				     const statsEl = document.getElementById('networkStats');
+				     if (!networkGraphNodes.length) {
+					 statsEl.textContent = networkMessage || 'No network to show for the current filters.';
+					 document.getElementById('modularityLine').textContent = '';
+					 document.getElementById('corePeripheryLine').textContent = '';
+					 return;
+				     }
+				     const numCommunities = networkCommunityStats.length;
+				     statsEl.textContent = networkGraphNodes.length + ' place(s), ' + networkGraphEdges.length + ' link(s), ' +
+					 numCommunities + ' detected communit' + (numCommunities === 1 ? 'y' : 'ies') + '.';
+				     document.getElementById('modularityLine').textContent = 'Modularity Q = ' + networkModularity.toFixed(3);
+				     const peripheryCount = networkGraphNodes.filter(n => (n.coreNumber || 0) <= 1).length;
+				     const coreCount = networkGraphNodes.filter(n => (n.coreNumber || 0) === networkMaxCore).length;
+				     document.getElementById('corePeripheryLine').textContent =
+					 'Coreness ranges 0–' + networkMaxCore + ' · periphery (≤1): ' + peripheryCount + ' place(s) · deepest core (=' + networkMaxCore + '): ' + coreCount + ' place(s).';
+				 }
+
+				 // Node ring = coreness (core/periphery), independent of fill (=community)
+				 // and radius (=records here), so all three read at once on the graph.
+				 function coreStrokeWidth(coreNumber) {
+				     return networkMaxCore > 0 ? 1 + 3 * ((coreNumber || 0) / networkMaxCore) : 1.1;
+				 }
+				 function coreStrokeColor(coreNumber) {
+				     const t = networkMaxCore > 0 ? (coreNumber || 0) / networkMaxCore : 0;
+				     return d3.interpolateRgb('#3a4048', '#eaf6ff')(t);
+				 }
+
+				 function renderNetwork() {
+				     const container = document.getElementById('networkContainer');
+				     const width = container.clientWidth || 800, height = container.clientHeight || 600;
+				     const svg = d3.select('#networkSvg').attr('viewBox', [0, 0, width, height]);
+				     svg.selectAll('*').remove();
+				     if (networkSim) { networkSim.stop(); networkSim = null; }
+
+				     // Community membership is computed once by updateCommunityAssignments()
+				     // (called by scheduleNetworkUpdate below, shared with the map's "color by
+				     // community" mode) -- this function just draws whatever it last found.
+				     const nodes = networkGraphNodes, edges = networkGraphEdges;
+				     networkBuilt = true;
+				     selectedCommunity = null;
+				     updateNetworkStatsText();
+				     if (!nodes.length) {
+					 document.getElementById('networkHoverBox').textContent = '';
+					 document.getElementById('communityList').innerHTML = '';
+					 document.getElementById('communityDetail').style.display = 'none';
+					 document.getElementById('bridgeList').innerHTML = '';
+					 return;
+				     }
+
+				     const maxWeight = Math.max(1, ...edges.map(e => e.weight));
+				     const g = svg.append('g');
+				     networkZoomBehavior = d3.zoom().scaleExtent([0.08, 8]).on('zoom', (event) => g.attr('transform', event.transform));
+				     svg.call(networkZoomBehavior);
+				     svg.on('click', () => { if (pinnedRecords) unpinLocation(); });
+
+				     const linkG = g.append('g').attr('class', 'net-links');
+				     networkLinksSel = linkG.selectAll('line').data(edges).join('line')
+				         .attr('class', 'net-link')
+				         .attr('stroke-width', d => 0.6 + 2.6 * (d.weight / maxWeight));
+
+				     const labelG = g.append('g').attr('class', 'net-labels');
+				     networkLabelsSel = labelG.selectAll('text').data(nodes).join('text')
+				         .attr('class', 'net-label')
+				         .text(d => d.id)
+				         .style('display', d => d.n >= 3 ? null : 'none');
+
+				     const nodeG = g.append('g').attr('class', 'net-nodes');
+				     networkNodesSel = nodeG.selectAll('circle').data(nodes).join('circle')
+				         .attr('class', d => 'net-node' + (pinnedLabel === d.id ? ' pinned-node' : ''))
+				         .attr('r', d => radiusFor(d.n))
+				         .attr('fill', d => communityColor(d.community))
+				         .attr('stroke', d => coreStrokeColor(d.coreNumber))
+				         .attr('stroke-width', d => coreStrokeWidth(d.coreNumber))
+				         .call(networkDragBehavior(null))
+				         .on('mouseover', (event, d) => {
+					     if (selectedCommunity === null) networkHighlight(d.id);
+					     document.getElementById('networkHoverBox').innerHTML =
+						 '<span class="name">' + escapeHtml(d.id) + '</span><br>' +
+						 d.n + ' record(s) here &middot; community ' + (d.community + 1) + ' &middot; coreness ' +
+						 (d.coreNumber || 0) + ' of ' + networkMaxCore + ' &middot; ' +
+						 Array.from(new Set(edges.filter(e => e.source.id === d.id || e.target.id === d.id)
+								    .map(e => e.source.id === d.id ? e.target.id : e.source.id))).length + ' connected place(s) &middot; bridge score ' +
+						 (d.betweenness || 0).toFixed(4);
+					 })
+				         .on('mouseout', () => {
+					     if (selectedCommunity === null) networkClearHighlight();
+					     document.getElementById('networkHoverBox').textContent = 'Hover a node for details, drag to reposition, click to pin it in the right panel.';
+					 })
+				         .on('click', (event, d) => { event.stopPropagation(); pinLocation(d.id, d.records); });
+
+				     networkSim = d3.forceSimulation(nodes)
+				         .force('link', d3.forceLink(edges).id(d => d.id).distance(d => 34 + 50 / Math.sqrt(d.weight)).strength(0.25))
+				         .force('charge', d3.forceManyBody().strength(-70))
+				         .force('center', d3.forceCenter(width / 2, height / 2))
+				         .force('collide', d3.forceCollide().radius(d => radiusFor(d.n) + 3))
+				         .on('tick', () => {
+					     networkLinksSel
+					         .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+					         .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+					     networkNodesSel.attr('cx', d => d.x).attr('cy', d => d.y);
+					     networkLabelsSel.attr('x', d => d.x + radiusFor(d.n) + 3).attr('y', d => d.y + 3);
+					 });
+				     networkNodesSel.call(networkDragBehavior(networkSim));
+
+				     renderCommunityList();
+				     renderCommunityDetail();
+				     renderBridgeList();
+				 }
+
+				 function scheduleNetworkUpdate() {
+				     const colorToggle = document.getElementById('toggleCommunityColor');
+				     const colorOn = !!(colorToggle && colorToggle.checked);
+				     if (mainView !== 'network' && !colorOn) { networkBuilt = false; return; }
+				     clearTimeout(networkDebounceTimer);
+				     networkDebounceTimer = setTimeout(() => {
+					 updateCommunityAssignments();
+					 if (mainView === 'network') {
+					     renderNetwork();
+					 } else {
+					     updateNetworkStatsText();
+					     renderCommunityList();
+					     renderCommunityDetail();
+					     renderBridgeList();
+					 }
+					 // Restyle already-drawn markers in place -- does NOT call back into
+					 // renderModernRange/renderAncient, so this can't re-trigger itself.
+					 if (colorOn) { applyMapCommunityColors(); applyCommunityFilter(); }
+				     }, 150);
+				 }
+
+				 function updateCommunityHudVisibility() {
+				     const colorToggle = document.getElementById('toggleCommunityColor');
+				     const show = mainView === 'network' || (colorToggle && colorToggle.checked);
+				     document.getElementById('networkHud').style.display = show ? 'block' : 'none';
+				 }
+
+				 document.querySelectorAll('input[name="mainView"]').forEach(input => {
+				     input.addEventListener('change', (e) => {
+					 if (!e.target.checked) return;
+					 mainView = e.target.value;
+					 document.getElementById('networkViewNote').style.display = mainView === 'network' ? 'block' : 'none';
+					 updateCommunityHudVisibility();
+					 if (mainView === 'network') {
+					     document.getElementById('map').style.display = 'none';
+					     document.getElementById('networkContainer').style.display = 'block';
+					     updateCommunityAssignments();
+					     renderNetwork();
+					 } else {
+					     document.getElementById('networkContainer').style.display = 'none';
+					     document.getElementById('map').style.display = 'block';
+					     if (networkSim) { networkSim.stop(); networkSim = null; }
+					     map.invalidateSize();
+					     applyCommunityFilter();
+					 }
+				     });
+				 });
+				 document.getElementById('networkResetZoom').addEventListener('click', () => {
+				     if (networkZoomBehavior) d3.select('#networkSvg').transition().duration(300).call(networkZoomBehavior.transform, d3.zoomIdentity);
+				 });
+				 document.getElementById('networkReheat').addEventListener('click', () => {
+				     if (networkSim) networkSim.alpha(1).restart();
+				 });
+				 document.getElementById('communityShowAll').addEventListener('click', () => {
+				     selectedCommunity = null;
+				     applyCommunityFilter();
+				     renderCommunityList();
+				     renderCommunityDetail();
+				 });
+				 document.getElementById('toggleCommunityColor').addEventListener('change', (e) => {
+				     updateCommunityHudVisibility();
+				     if (e.target.checked) {
+					 updateCommunityAssignments();
+					 applyMapCommunityColors();
+					 updateNetworkStatsText();
+					 renderCommunityList();
+					 renderCommunityDetail();
+					 renderBridgeList();
+				     } else {
+					 selectedCommunity = null;
+					 rerenderAllPointLayers(); // full redraw restores the normal blue/amber colors
+				     }
+				 });
+				 window.addEventListener('resize', () => { if (mainView === 'network') scheduleNetworkUpdate(); });
+
+				 function updateStats() {
+				     document.getElementById('stats').textContent =
+					 (window.__modernStats || '') + '  ·  ' + (window.__pubStats || '') +
+					 '  ·  ' + DATA.records.length + ' records total in collection';
+				 }
+
+				 // --- year <-> slider/pixel "warp" -----------------------------------------
+				 // Builds a piecewise-linear map between real calendar years and a fixed-
+				 // resolution unit space used for both the <input type=range> value and all
+				 // pixel positioning (histogram bars, highlight bar). Plain linear by
+				 // default; when breakYear falls inside (yearMin, yearMax), everything at or
+				 // before it gets squeezed into just breakFrac of the unit space and
+				 // everything after gets the rest -- so a long, sparse era (e.g. this
+				 // collection's 650 BC-1700 AD tail, which has very few records) doesn't
+				 // eat space a short, dense one needs. Native range-input thumbs, the
+				 // highlight overlay, and the histogram bars all read positions out of this
+				 // same object, so they stay pixel-aligned regardless of the shape of the map.
+				 const SLIDER_RESOLUTION = 100000;
+				 function makeYearWarp(yearMin, yearMax, breakYear, breakFrac) {
+				     const res = SLIDER_RESOLUTION;
+				     const hasBreak = breakYear !== null && breakYear !== undefined && breakYear > yearMin && breakYear < yearMax;
+				     if (!hasBreak) {
+					 const span = Math.max(1, yearMax - yearMin);
+					 return {
+					     resolution: res, breakFrac: null, breakYear: null,
+					     toWarp: y => ((y - yearMin) / span) * res,
+					     toYear: w => yearMin + (w / res) * span,
+					 };
+				     }
+				     const ancientSpan = breakYear - yearMin;
+				     const modernSpan = yearMax - breakYear;
+				     const breakW = res * breakFrac;
+				     return {
+					 resolution: res, breakFrac: breakFrac, breakYear: breakYear,
+					 toWarp: y => (y <= breakYear
+						       ? (Math.max(0, y - yearMin) / ancientSpan) * breakW
+						       : breakW + ((y - breakYear) / modernSpan) * (res - breakW)),
+					 toYear: w => (w <= breakW
+						       ? yearMin + (w / breakW) * ancientSpan
+						       : breakYear + ((w - breakW) / (res - breakW)) * modernSpan),
+				     };
+				 }
+
+				 // --- histogram drawing ---------------------------------------------------
+				 function drawHistogram(canvas, bins, colorBright, colorDim, minY, maxY, warp) {
+				     const dpr = window.devicePixelRatio || 1;
+				     const cssW = canvas.clientWidth || 320;
+				     const cssH = canvas.clientHeight || 40;
+
+
+
+if (canvas.width !== cssW * dpr || canvas.height !== cssH * dpr) {
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+}
+const ctx = canvas.getContext('2d');
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+ctx.clearRect(0, 0, cssW, cssH);
+
+const maxN = Math.max(1, ...bins.map(b => b.n));
+const domainMin = bins[0].s, domainMax = bins[bins.length - 1].e;
+const domainSpan = Math.max(1, domainMax - domainMin);
+const xFor = warp
+      ? y => (warp.toWarp(y) / warp.resolution) * cssW
+      : y => ((y - domainMin) / domainSpan) * cssW;
+const gap = 1;
+
+for (const b of bins) {
+    const x0 = xFor(b.s);
+    const x1 = xFor(b.e + 1);
+    const w = Math.max(1, x1 - x0 - gap);
+    const h = (b.n / maxN) * (cssH - 2);
+    const inRange = b.e >= minY && b.s <= maxY;
+    ctx.fillStyle = inRange ? colorBright : colorDim;
+    ctx.fillRect(x0, cssH - h, w, h);
+}
+
+if (warp && warp.breakFrac !== null) {
+    const bx = warp.breakFrac * cssW;
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(bx + 0.5, 0);
+    ctx.lineTo(bx + 0.5, cssH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+}
+}
+
+// --- two INDEPENDENT range timelines -------------------------------------
+function wireRangeTimeline({ minId, maxId, wrapId, playId, labelId, highlightId,
+			     histCanvasId, histBins, colorBright, colorDim,
+			     yearMin, yearMax, defaultStartFrac, defaultWidthFrac,
+			     breakYear, breakFrac, breakMarkId, onChange }) {
+    const minInput = document.getElementById(minId);
+    const maxInput = document.getElementById(maxId);
+    const label = document.getElementById(labelId);
+    const highlight = document.getElementById(highlightId);
+    const playBtn = document.getElementById(playId);
+    const histCanvas = document.getElementById(histCanvasId);
+
+    const warp = makeYearWarp(yearMin, yearMax, breakYear, breakFrac || 0.12);
+    const res = warp.resolution;
+    const minGap = Math.max(1, Math.round(res * 0.005));
+    [minInput, maxInput].forEach(el => { el.min = 0; el.max = res; el.step = 1; });
+
+    const breakMark = breakMarkId ? document.getElementById(breakMarkId) : null;
+    if (breakMark) {
+	if (warp.breakFrac !== null) {
+	    breakMark.style.display = 'block';
+	    breakMark.style.left = (warp.breakFrac * 100) + '%';
+	    breakMark.title = fmtYear(warp.breakYear) + ' -- scale is compressed before this point so the denser modern era gets more room';
+	} else {
+	    breakMark.style.display = 'none';
+	}
+    }
+
+    // Default window is still specified as a fraction of the REAL year span
+    // (so "last 10%" keeps meaning "last 10% of calendar time" regardless of
+    // how that time gets visually compressed), then converted to warp units.
+    const realSpan = yearMax - yearMin;
+    const defaultStartYear = yearMin + Math.round(realSpan * defaultStartFrac);
+    const defaultEndYear = yearMin + Math.round(realSpan * (defaultStartFrac + defaultWidthFrac));
+    let startV = Math.round(warp.toWarp(defaultStartYear));
+    let endV = Math.round(warp.toWarp(defaultEndYear));
+    // If the default window happens to land inside the compressed part of the
+    // scale (e.g. the publication timeline's 1886-1921 default sits inside
+    // the compressed pre-1980 tail), toWarp() can put the two handles just a
+    // few CSS pixels apart -- both drag thumbs are 14px circles, so anything
+    // much narrower than that makes it physically very hard to grab one
+    // without dragging the other. Widen the initial window in WARP space
+    // (which is linear in on-screen pixels, unlike years) so the two handles
+    // always start out comfortably separated, regardless of where that lands
+    // on the compressed/expanded part of the axis.
+    const minDefaultWidth = Math.round(res * 0.08);
+    if (endV - startV < minDefaultWidth) {
+	endV = Math.min(res, startV + minDefaultWidth);
+	startV = Math.max(0, endV - minDefaultWidth);
+    }
+    minInput.value = startV;
+    maxInput.value = Math.min(res, Math.max(startV + minGap, endV));
+
+    function updateHighlight() {
+	const lo = parseInt(minInput.value, 10), hi = parseInt(maxInput.value, 10);
+	const pctLo = (lo / res) * 100, pctHi = (hi / res) * 100;
+	highlight.style.left = pctLo + '%';
+	highlight.style.width = Math.max(0, pctHi - pctLo) + '%';
+    }
+
+    function refresh() {
+	let lo = parseInt(minInput.value, 10), hi = parseInt(maxInput.value, 10);
+	if (lo > hi - minGap) {
+	    lo = Math.max(0, hi - minGap);
+	    minInput.value = lo;
+	}
+	const yLo = Math.round(warp.toYear(lo)), yHi = Math.round(warp.toYear(hi));
+	label.textContent = fmtRange(yLo, yHi);
+	updateHighlight();
+	drawHistogram(histCanvas, histBins, colorBright, colorDim, yLo, yHi, warp);
+	onChange(yLo, yHi);
+    }
+
+    minInput.addEventListener('input', refresh);
+    maxInput.addEventListener('input', refresh);
+    minInput.addEventListener('pointerdown', () => { minInput.style.zIndex = 3; maxInput.style.zIndex = 2; });
+    maxInput.addEventListener('pointerdown', () => { maxInput.style.zIndex = 3; minInput.style.zIndex = 2; });
+    window.addEventListener('resize', () => drawHistogram(histCanvas, histBins, colorBright, colorDim,
+							  Math.round(warp.toYear(parseInt(minInput.value, 10))), Math.round(warp.toYear(parseInt(maxInput.value, 10))), warp));
+
+    let playing = false, timer = null;
+    playBtn.addEventListener('click', () => {
+	playing = !playing;
+	playBtn.textContent = playing ? '⏸' : '▶';
+	if (playing) {
+	    timer = setInterval(() => {
+		const w = parseInt(maxInput.value, 10) - parseInt(minInput.value, 10);
+		let lo = parseInt(minInput.value, 10) + Math.max(1, Math.round(res / 200));
+		let hi = lo + w;
+		if (hi > res) { lo = 0; hi = w; }
+		minInput.value = lo;
+		maxInput.value = hi;
+		refresh();
+	    }, 110);
+	} else {
+	    clearInterval(timer);
+	}
+    });
+
+    refresh();
+}
+
+wireRangeTimeline({
+    minId: 'aboutMin', maxId: 'aboutMax', wrapId: 'aboutWrap', playId: 'aboutPlay',
+    labelId: 'aboutLabel', highlightId: 'aboutHighlight', histCanvasId: 'aboutHist',
+    histBins: DATA.aboutHist, colorBright: '#4fa3ff', colorDim: '#2b3542',
+    yearMin: DATA.aboutYearMin, yearMax: DATA.aboutYearMax,
+    // Now that this timeline spans all the way back to BC dates, a fraction-
+    // of-full-span default would land the initial view somewhere in the early
+    // medieval period instead of the well-populated recent centuries. Anchor
+    // the default window to the LAST 10% of the full span instead, so it
+    // still ends at aboutYearMax and starts wherever that lands (whatever the
+    // data's actual range turns out to be) -- drag left to reach BC.
+    defaultStartFrac: 0.9, defaultWidthFrac: 0.1,
+    // This dataset has very few records before the 1700s (the whole 650 BC-
+    // 1700 AD stretch is a long tail), so give it just 12% of the slider/
+    // histogram width and let the densely-populated 1700-2100 AD range fill
+    // the rest -- makes recent-centuries selection far less fiddly without
+    // hiding the BC/medieval end, which is still fully reachable at the left.
+    breakYear: 1700, breakFrac: 0.12, breakMarkId: 'aboutBreakMark',
+    onChange: (lo, hi) => {
+	renderModernRange(lo, hi);
+	renderAncient(lo, hi);
+	// With intersect on, moving THIS slider can also change which records
+	// the publication layer should show (it now depends on this range too).
+	if (intersectTimelines) renderPubRange(currentPubRange[0], currentPubRange[1]);
+    },
+});
+
+wireRangeTimeline({
+    minId: 'pubMin', maxId: 'pubMax', wrapId: 'pubWrap', playId: 'pubPlay',
+    labelId: 'pubLabel', highlightId: 'pubHighlight', histCanvasId: 'pubHist',
+    histBins: DATA.pubHist, colorBright: '#8bd17c', colorDim: '#2b3542',
+    yearMin: DATA.pubYearMin, yearMax: DATA.pubYearMax,
+    defaultStartFrac: 0.55, defaultWidthFrac: 0.12,
+    // Same treatment as the aboutness timeline: publication years are brutally
+    // back-loaded (94.6% of dated records are 1980 or later), so compress the
+    // 1727-1980 tail to 15% of the width and let the well-populated decades
+    // spread out over the rest.
+    breakYear: 1980, breakFrac: 0.15, breakMarkId: 'pubBreakMark',
+    onChange: (lo, hi) => {
+	renderPubRange(lo, hi);
+	// Same reasoning in reverse: with intersect on, this range now also
+	// constrains the aboutness/ancient layers.
+	if (intersectTimelines) { renderModernRange(currentAboutRange[0], currentAboutRange[1]); renderAncient(currentAboutRange[0], currentAboutRange[1]); }
+    },
+});
+
+document.getElementById('toggleIntersect').addEventListener('change', (e) => {
+    intersectTimelines = e.target.checked;
+    // Whether a layer requires the other one now depends on this toggle, so
+    // every range-based layer needs a real recompute, not just a redraw.
+    rerenderAllPointLayers();
+});
+document.getElementById('toggleAncient').addEventListener('change', (e) => {
+    if (e.target.checked) map.addLayer(ancientLayer); else map.removeLayer(ancientLayer);
+    // Visibility only -- doesn't change what the intersect filter counts (see
+    // recordHasAboutInRange) -- but it DOES change what the community/network
+    // graph sees (buildNetworkGraph reads this toggle directly), so that still
+    // needs a recompute, not just this layer's own redraw above. It also
+    // changes whether publication places count as "shown alone".
+    scheduleSunburstUpdate();
+    scheduleLinksUpdate();
+    scheduleGeoLinksUpdate();
+    scheduleNetworkUpdate();
+    updatePubLinksAvailability();
+});
+document.getElementById('toggleModern').addEventListener('change', (e) => {
+    if (e.target.checked) map.addLayer(modernLayer); else map.removeLayer(modernLayer);
+    scheduleSunburstUpdate();
+    scheduleLinksUpdate();
+    scheduleGeoLinksUpdate();
+    scheduleNetworkUpdate();
+    updatePubLinksAvailability();
+});
+document.getElementById('togglePubs').addEventListener('change', (e) => {
+    if (e.target.checked) map.addLayer(pubLayer); else map.removeLayer(pubLayer);
+    // Same here: visibility only, doesn't change the intersect filter (see
+    // intersectRequiresPub/About above), but it DOES change the community/
+    // network graph now that it spans publication places too, and whether the
+    // publication-place link overlay below is even available.
+    scheduleSunburstUpdate();
+    scheduleLinksUpdate();
+    scheduleNetworkUpdate();
+    updatePubLinksAvailability();
+});
+document.getElementById('toggleLinks').addEventListener('change', (e) => {
+    if (e.target.checked) { map.addLayer(linksLayer); renderLinks(); }
+    else { map.removeLayer(linksLayer); document.getElementById('linksStats').textContent = ''; }
+});
+document.getElementById('toggleGeoLinks').addEventListener('change', (e) => {
+    if (e.target.checked) { map.addLayer(geoLinksLayer); renderGeoLinks(); }
+    else { map.removeLayer(geoLinksLayer); document.getElementById('geoLinksStats').textContent = ''; }
+});
+document.getElementById('togglePubLinks').addEventListener('change', (e) => {
+    if (e.target.checked) { map.addLayer(pubLinksLayer); renderPubLinks(); }
+    else { map.removeLayer(pubLinksLayer); document.getElementById('pubLinksStats').textContent = ''; }
+});
+// Establish the correct initial visibility (all three layer toggles default
+// to checked/on, i.e. NOT "publication places alone", so this starts hidden).
+updatePubLinksAvailability();
+
+// --- marker rendering style: bubbles / hex / heat -------------------------
+function rerenderAllPointLayers() {
+    renderModernRange(currentAboutRange[0], currentAboutRange[1]);
+    renderAncient(currentAboutRange[0], currentAboutRange[1]);
+    renderPubRange(currentPubRange[0], currentPubRange[1]);
+}
+document.querySelectorAll('input[name="mapStyle"]').forEach(input => {
+    input.addEventListener('change', (e) => {
+	if (!e.target.checked) return;
+	mapStyle = e.target.value;
+	rerenderAllPointLayers();
+    });
+});
+// Hex bins are computed from absolute world-pixel positions at the CURRENT
+// zoom (see drawHexPoints), so panning never invalidates them but a zoom
+// change does -- re-bin whenever the zoom level actually changes.
+map.on('zoomend', () => { if (mapStyle === 'hex') rerenderAllPointLayers(); });
+
+// --- filter by language ---------------------------------------------------
+function updateLangFilterSummary() {
+    const total = DATA.languageList.length;
+    const n = selectedLanguages.size;
+    document.getElementById('langFilterSummary').textContent =
+	n === total ? 'Filter by language: showing all (' + total + ')'
+        : n === 0 ? 'Filter by language: none selected (nothing shown)'
+        : 'Filter by language: showing ' + n + ' of ' + total;
+}
+
+function onLanguageFilterChange() {
+    selectedLanguages = new Set(
+	Array.from(document.querySelectorAll('.langCheckbox:checked'), cb => cb.value)
+    );
+    updateLangFilterSummary();
+    rerenderAllPointLayers();
+}
+
+function buildLanguageFilterUI() {
+    const listEl = document.getElementById('langList');
+    listEl.innerHTML = DATA.languageList.map(l =>
+	'<label class="lang-opt"><input type="checkbox" class="langCheckbox" value="' + escapeHtml(l.name) + '" checked> ' +
+	    escapeHtml(l.name) + ' <span class="lang-count">(' + l.count + ')</span></label>'
+    ).join('');
+    listEl.querySelectorAll('.langCheckbox').forEach(cb => cb.addEventListener('change', onLanguageFilterChange));
+    updateLangFilterSummary();
+}
+document.getElementById('langSelectAll').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.langCheckbox').forEach(cb => { cb.checked = true; });
+    onLanguageFilterChange();
+});
+document.getElementById('langClearAll').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.querySelectorAll('.langCheckbox').forEach(cb => { cb.checked = false; });
+    onLanguageFilterChange();
+});
+buildLanguageFilterUI();
+
+document.getElementById('zoomAbout').addEventListener('click', () => {
+    // uses lastModernBounds/lastAncientBounds (not *Layer.getBounds()) because
+    // L.heatLayer, used in heatmap mode, doesn't implement getBounds(). Both
+    // eras are combined since they now share one timeline.
+    const parts = [lastModernBounds, lastAncientBounds].filter(Boolean);
+    if (!parts.length) return;
+    let combined = parts[0];
+    for (let i = 1; i < parts.length; i++) combined = combined.extend(parts[i]);
+    map.fitBounds(combined, { padding: [30, 30], maxZoom: 8 });
+});
+document.getElementById('zoomPub').addEventListener('click', () => {
+    if (lastPubBounds) map.fitBounds(lastPubBounds, { padding: [30, 30], maxZoom: 8 });
+});
+
+// ================================================== radial icicle =======
+// A zoomable sunburst (D3's classic partition-layout pattern) that
+// rebuilds from scratch every time the "current view" changes: active
+// layers, either slider's range, or the map's pan/zoom. See
+// recomputeVisibleRecords() / buildTreeFromRecords() for what "current
+// view" means precisely. Rebuilding (rather than trying to animate
+// between two different tree shapes) keeps this robust -- the click-to-
+// zoom transitions still animate smoothly WITHIN one stable snapshot.
+function initSunburstSvg() {
+    const wrap = document.getElementById('sunburstChart');
+    const size = Math.max(220, Math.min(wrap.clientWidth || 340, 340));
+    sunRadius = size / 6;
+    sunSvg = d3.select('#sunburstSvg')
+        .attr('viewBox', [-size / 2, -size / 2, size, size])
+        .attr('width', size)
+        .attr('height', size)
+        .style('font', '9px sans-serif');
+    sunSvg.selectAll('*').remove();  // drop any previous <g> (e.g. from a resize re-init) before rebuilding
+    sunG = sunSvg.append('g');
+}
+
+function arcVisible(d) { return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0; }
+function labelVisible(d) { return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.045; }
+function labelTransform(d) {
+    const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
+    const y = (d.y0 + d.y1) / 2 * sunRadius;
+    return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
+}
+function pathToRoot(d) { const out = []; let n = d; while (n) { out.unshift(n); n = n.parent; } return out; }
+
+function renderSunburst(treeData) {
+    if (!sunG) initSunburstSvg();
+    sunG.selectAll('*').remove();
+
+    sunRoot = d3.hierarchy(treeData).sum(d => d.value).sort((a, b) => b.value - a.value);
+    d3.partition().size([2 * Math.PI, sunRoot.height + 1])(sunRoot);
+    sunRoot.each(d => d.current = d);
+
+    const nTop = (treeData.children ? treeData.children.length : 1) + 1;
+    sunColor = d3.scaleOrdinal(d3.quantize(d3.interpolateRainbow, nTop));
+
+    sunArc = d3.arc()
+        .startAngle(d => d.x0).endAngle(d => d.x1)
+        .padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.003))
+        .padRadius(sunRadius * 1.5)
+        .innerRadius(d => d.y0 * sunRadius)
+        .outerRadius(d => Math.max(d.y0 * sunRadius, d.y1 * sunRadius - 1));
+
+    function colorOf(d) { let n = d; while (n.depth > 1) n = n.parent; return sunColor(n.data.name); }
+
+    sunPathSel = sunG.append('g').selectAll('path')
+        .data(sunRoot.descendants().slice(1))
+        .join('path')
+        .attr('fill', colorOf)
+        .attr('fill-opacity', d => arcVisible(d.current) ? (d.children ? 0.72 : 0.5) : 0)
+        .attr('pointer-events', d => arcVisible(d.current) ? 'auto' : 'none')
+        .attr('d', d => sunArc(d.current))
+        .style('cursor', 'pointer')
+        .on('click', sunClicked)
+        .on('mouseenter', (event, d) => showSunHover(d));
+
+    sunLabelSel = sunG.append('g')
+        .attr('pointer-events', 'none').attr('text-anchor', 'middle').style('user-select', 'none')
+        .selectAll('text')
+        .data(sunRoot.descendants().slice(1))
+        .join('text')
+        .attr('dy', '0.32em').attr('font-size', '8.5px').attr('fill', '#e8e8e8')
+        .attr('fill-opacity', d => +labelVisible(d.current))
+        .attr('transform', d => labelTransform(d.current))
+        .text(d => d.data.name.length > 20 ? d.data.name.slice(0, 18) + '…' : d.data.name);
+
+    sunParentCircle = sunG.append('circle')
+        .datum(sunRoot).attr('r', sunRadius).attr('fill', '#1b1f26').attr('stroke', '#333')
+        .attr('pointer-events', 'all').style('cursor', 'pointer').on('click', sunClicked);
+
+    sunCenterLabel = sunG.append('text').attr('text-anchor', 'middle').attr('dy', '0.1em')
+        .style('font-size', '11px').style('font-weight', '700').attr('fill', '#e8e8e8');
+    sunCenterSub = sunG.append('text').attr('text-anchor', 'middle').attr('dy', '1.4em')
+        .style('font-size', '9px').attr('fill', '#9aa0a8');
+
+    updateSunCenter(sunRoot);
+    updateSunBreadcrumb(sunRoot);
+}
+
+function sunClicked(event, p) {
+    if (!p) return;
+    sunParentCircle.datum(p.parent || sunRoot);
+    updateSunCenter(p);
+    updateSunBreadcrumb(p);
+
+    sunRoot.each(d => d.target = {
+	x0: Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
+	x1: Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
+	y0: Math.max(0, d.y0 - p.depth),
+	y1: Math.max(0, d.y1 - p.depth)
+    });
+
+    const t = sunG.transition().duration(550);
+
+    sunPathSel.transition(t)
+        .tween('data', d => { const i = d3.interpolate(d.current, d.target); return tt => d.current = i(tt); })
+        .filter(function(d) { return +this.getAttribute('fill-opacity') || arcVisible(d.target); })
+        .attr('fill-opacity', d => arcVisible(d.target) ? (d.children ? 0.72 : 0.5) : 0)
+        .attr('pointer-events', d => arcVisible(d.target) ? 'auto' : 'none')
+        .attrTween('d', d => () => sunArc(d.current));
+
+    sunLabelSel.filter(function(d) { return +this.getAttribute('fill-opacity') || labelVisible(d.target); })
+        .transition(t)
+        .attr('fill-opacity', d => +labelVisible(d.target))
+        .attrTween('transform', d => () => labelTransform(d.current));
+}
+
+function updateSunCenter(d) {
+    const name = d === sunRoot ? 'Current view' : d.data.name;
+    sunCenterLabel.text(name.length > 20 ? name.slice(0, 18) + '…' : name);
+    sunCenterSub.text(d.value + ' heading instance(s)');
+}
+
+function updateSunBreadcrumb(d) {
+    const chain = pathToRoot(d).filter(n => n !== sunRoot);
+    const el = document.getElementById('sunBreadcrumb');
+    if (!chain.length) {
+	el.innerHTML = '<b>All subjects in current view</b> (click a wedge to drill in)';
+	return;
+    }
+    el.innerHTML = chain.map((n, i) =>
+	i === chain.length - 1 ? '<b>' + escapeHtml(n.data.name) + '</b>' : escapeHtml(n.data.name)
+    ).join(' → ');
+}
+
+function showSunHover(d) {
+    const chain = pathToRoot(d).filter(n => n !== sunRoot).map(n => n.data.name).join(' — ');
+    const titles = d.data.titles || [];
+    const box = document.getElementById('sunHoverBox');
+    const titlesHtml = titles.slice(0, 3).map(t => '&ldquo;' + escapeHtml(t) + '&rdquo;').join('<br>');
+    box.innerHTML =
+	'<div class="name">' + escapeHtml(d.data.name) + '</div>' +
+	'<div class="count">' + d.value + ' heading instance(s) &middot; path: ' + escapeHtml(chain) + '</div>' +
+	(titlesHtml ? '<div class="titles">e.g. ' + titlesHtml + '</div>' : '');
+}
+
+function findSunNode(query) {
+    query = query.trim().toLowerCase();
+    if (!query || !sunRoot) return null;
+    let found = null;
+    sunRoot.each(d => { if (!found && d.depth > 0 && d.data.name.toLowerCase().includes(query)) found = d; });
+    return found;
+}
+
+function doSunSearch() {
+    const q = document.getElementById('sunSearchInput').value;
+    const msg = document.getElementById('sunSearchMsg');
+    const found = findSunNode(q);
+    if (!found) {
+	msg.textContent = q.trim() ? 'No subject term matches "' + q + '" in the current view.' : '';
+	return;
+    }
+    msg.textContent = 'Found: ' + found.data.name + ' (' + found.value + ' heading instance(s))';
+    sunClicked(null, found.parent || sunRoot);
+}
+
+document.getElementById('sunSearchBtn').addEventListener('click', doSunSearch);
+document.getElementById('sunSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSunSearch(); });
+document.getElementById('sunResetBtn').addEventListener('click', () => { if (sunRoot) sunClicked(null, sunRoot); });
+document.getElementById('collapseBtn').addEventListener('click', (e) => {
+    const panel = document.getElementById('rightPanel');
+    panel.classList.toggle('collapsed');
+    e.target.textContent = panel.classList.contains('collapsed') ? '◀' : '▶';
+});
+
+// --- "current view" = active layers ∩ selected time range(s) ∩ map's
+// current pan/zoom viewport. Recomputed (debounced) whenever any of
+// those change. ---
+function recomputeVisibleRecords() {
+    const bounds = map.getBounds();
+    const showModern = document.getElementById('toggleModern').checked;
+    const showAncient = document.getElementById('toggleAncient').checked;
+    const showPub = document.getElementById('togglePubs').checked;
+    const [aLo, aHi] = currentAboutRange;
+    const [pLo, pHi] = currentPubRange;
+
+    const out = [];
+    for (const r of DATA.records) {
+	if (!recordPassesLanguageFilter(r)) continue;
+	let included = false;
+	if (showModern || showAncient) {
+	    for (const m of r.about) {
+		const isAncient = m.s < DATA.ancientCutoff;
+		if (isAncient && !showAncient) continue;
+		if (!isAncient && !showModern) continue;
+		if (!(m.s <= aHi && m.e >= aLo)) continue;
+		if (!searchAllowsAbout(m.g, r.id)) continue;
+		const xy = geonameXY(m.g);
+		if (!xy || !bounds.contains(xy)) continue;
+		included = true;
+		break;
+	    }
+	}
+	if (!included && showPub && r.pubY !== null && r.pubY >= pLo && r.pubY <= pHi && searchAllowsRecord(r.id)) {
+	    for (const place of r.pubP) {
+		const xy = placeXY(place);
+		if (!xy || !bounds.contains(xy)) continue;
+		included = true;
+		break;
+	    }
+	}
+	if (included) out.push(r);
+    }
+    return out;
+}
+
+function buildTreeFromRecords(records) {
+    const root = { name: 'Current view', value: 0, children: new Map(), titles: [] };
+    function child(node, name) {
+	if (!node.children.has(name)) node.children.set(name, { name, value: 0, children: new Map(), titles: [] });
+	return node.children.get(name);
+    }
+    let headingCount = 0;
+    for (const r of records) {
+	for (const parts of r.heads) {
+	    headingCount++;
+	    let node = root;
+	    for (const p of parts) node = child(node, p);
+	    node.value += 1;
+	    if (r.title && node.titles.length < 3 && !node.titles.includes(r.title)) node.titles.push(r.title);
+	}
+    }
+    function toPlain(node) {
+	const d = { name: node.name, value: node.value };
+	if (node.titles.length) d.titles = node.titles;
+	if (node.children.size) d.children = Array.from(node.children.values()).map(toPlain);
+	return d;
+    }
+    return { tree: toPlain(root), headingCount };
+}
+
+// --- "Subject themes over time" mini-streamgraph -------------------------
+// The same 19 non-geographic topic bands as the companion Subject Themes
+// River page (DATA.bandOrder/bandLabel/bandColor/bandTexture, all computed
+// there from the shared topic_bands.py classifier, and each record's own
+// r.tb -- a small array of band indices -- tagged at build time by the same
+// module), but scoped to whichever records this panel is currently showing:
+// the live map viewport (updateSunburstForCurrentView) or a single pinned
+// location (renderPinnedSubjects). Deliberately simpler than the full page
+// -- no smoothing, no hover, no direct labels, and capped to the busiest
+// TS_MAX_BANDS topics -- since this is a small multiple inside a 380px
+// panel, not a standalone chart; a location that needs the full detail is
+// one companion-link click away.
+const TS_MAX_BANDS = 8;
+const TS_MAX_BINS = 26;
+let tsFocusedBand = null;  // clicked legend band index, persists across re-renders (cleared if it drops out of view)
+let tsLastRecords = null;  // last records this panel drew from, so a legend click can redraw without recomputing
+
+function tsIsTextured(b) { return !!DATA.bandTexture[b]; }
+function tsSwatchStyle(b) {
+    if (!tsIsTextured(b)) return 'background:' + DATA.bandColor[b] + ';';
+    const t = DATA.bandTexture[b];
+    return 'background-color:#20242c;border:1px solid ' + t.tone + ';background-image:' +
+	'repeating-linear-gradient(' + t.angle + 'deg,' + t.tone + ' 0 1.4px,transparent 1.4px ' + t.spacing + 'px);';
+}
+function tsYearSpanText(lo, hi) {
+    return lo === null ? 'no dated records' : (lo === hi ? String(lo) : lo + '–' + hi);
+}
+function tsHoverDetail(bi, bandOrder, bandTotal, bandYearMin, bandYearMax, scopeCount) {
+    const b = bandOrder[bi];
+    const lo = bandYearMin[bi], hi = bandYearMax[bi];
+    const pct = scopeCount ? Math.round(100 * bandTotal[bi] / scopeCount) : 0;
+    document.getElementById('topicStreamHoverBox').innerHTML =
+	'<span class="ts-name">' + escapeHtml(DATA.bandLabel[b]) + '</span><br>' +
+	'<span class="ts-detail">' + bandTotal[bi].toLocaleString() + ' record(s) in view (' + pct + '%) — ' +
+	tsYearSpanText(lo, hi) + '</span>';
+}
+function tsSetHoverDefault() {
+    const hint = tsFocusedBand !== null
+          ? 'Click "Show all" to clear the focused topic, or hover another topic.'
+          : 'Hover a topic for its date range, or click to isolate it in the chart…';
+    document.getElementById('topicStreamHoverBox').innerHTML = '<span class="ts-hint">' + hint + '</span>';
+}
+function setTsFocus(bi) {
+    tsFocusedBand = (tsFocusedBand === bi) ? null : bi;
+    if (tsLastRecords) renderTopicStream(tsLastRecords);
+}
+
+function renderTopicStream(records) {
+    tsLastRecords = records;
+    const svgEl = document.getElementById('topicStreamSvg');
+    const svg = d3.select(svgEl);
+    const legendEl = document.getElementById('topicStreamLegend');
+    const labelEl = document.getElementById('topicStreamLabel');
+    const focusHintEl = document.getElementById('topicStreamFocusHint');
+    svg.selectAll('*').remove();
+
+    const bandOrder = DATA.bandOrder;
+    const bandTotal = new Array(bandOrder.length).fill(0);
+    const bandYearMin = new Array(bandOrder.length).fill(null);
+    const bandYearMax = new Array(bandOrder.length).fill(null);
+    for (const r of records) {
+	if (!r.tb) continue;
+	for (const bi of r.tb) {
+	    bandTotal[bi]++;
+	    if (r.pubY !== null) {
+		if (bandYearMin[bi] === null || r.pubY < bandYearMin[bi]) bandYearMin[bi] = r.pubY;
+		if (bandYearMax[bi] === null || r.pubY > bandYearMax[bi]) bandYearMax[bi] = r.pubY;
+	    }
+	}
+    }
+    const matchedRecordCount = records.filter(r => r.tb && r.tb.length).length;
+    const activeIdx = bandOrder.map((_, i) => i).filter(i => bandTotal[i] > 0)
+          .sort((a, b) => bandTotal[b] - bandTotal[a]);
+    // Cap to the busiest N, then restore BAND_ORDER's own sequence so the
+    // stack's adjacency (and therefore its colors) matches the CVD-validated
+    // order from topic_bands.py -- never re-sort by count for the actual draw.
+    const shownIdx = activeIdx.slice(0, TS_MAX_BANDS).sort((a, b) => a - b);
+    const shownSet = new Set(shownIdx);
+    const hiddenCount = activeIdx.length - shownIdx.length;
+
+    if (tsFocusedBand !== null && !shownSet.has(tsFocusedBand)) tsFocusedBand = null;  // dropped out of the current top-N
+
+    const yearRecs = records.filter(r => r.pubY !== null && r.tb && r.tb.some(bi => shownSet.has(bi)));
+
+    // A single active topic still gets a chart down to just one dated record
+    // (rendered as a dot -- see below); with more than one topic a proper
+    // stream needs a few points to read as a shape, so that case keeps the
+    // stricter floor.
+    const minYearRecs = shownIdx.length === 1 ? 1 : 3;
+    if (!shownIdx.length || yearRecs.length < minYearRecs) {
+	legendEl.innerHTML = '';
+	focusHintEl.classList.remove('show');
+	tsFocusedBand = null;
+	tsSetHoverDefault();
+	labelEl.textContent = records.length
+	    ? (matchedRecordCount
+	       ? 'Not enough dated topic-matched records here to chart (' + matchedRecordCount + ' of ' +
+	       records.length + ' record(s) match a topic, but too few have a usable publication year).'
+	       : 'None of these ' + records.length + ' record(s) match a named subject topic.')
+	    : 'No records in view.';
+	return;
+    }
+
+    const yMin = Math.min(...yearRecs.map(r => r.pubY)), yMax = Math.max(...yearRecs.map(r => r.pubY));
+    const span = yMax - yMin + 1;
+    const nBins = Math.max(1, Math.min(TS_MAX_BINS, span));
+    const binSize = Math.ceil(span / nBins);
+    const bins = [];
+    for (let s = yMin; s <= yMax; s += binSize) bins.push({ s, e: Math.min(yMax, s + binSize - 1) });
+
+    const series = {};
+    shownIdx.forEach(i => { series[i] = new Array(bins.length).fill(0); });
+    for (const r of yearRecs) {
+	const bi = Math.min(bins.length - 1, Math.floor((r.pubY - yMin) / binSize));
+	for (const b of r.tb) if (shownSet.has(b)) series[b][bi]++;
+    }
+
+    const rows = bins.map((bin, i) => {
+	const row = {};
+	shownIdx.forEach(b => { row[b] = series[b][i]; });
+	return row;
+    });
+    const stackGen = d3.stack().keys(shownIdx).offset(d3.stackOffsetWiggle);
+    const stacked = stackGen(rows);
+
+    const width = Math.max(240, svgEl.clientWidth || 340);
+    const CHART_H = 78, AXIS_H = 18;
+    const height = CHART_H + AXIS_H;
+    svg.attr('viewBox', '0 0 ' + width + ' ' + height).attr('preserveAspectRatio', 'none');
+
+    // A single bin (e.g. one topic with every dated record in the same year)
+    // would otherwise hand d3 a zero-width [0,0] domain -- guard it to at
+    // least [0,1] and just centre that one point instead.
+    const xScale = d3.scaleLinear().domain([0, Math.max(1, bins.length - 1)]).range([2, width - 2]);
+    const x = i => (bins.length === 1 ? width / 2 : xScale(i));
+    let yLo = 0, yHi = 0;
+    stacked.forEach(layer => layer.forEach(d => { yLo = Math.min(yLo, d[0], d[1]); yHi = Math.max(yHi, d[0], d[1]); }));
+    if (yHi === yLo) { yHi += 1; yLo -= 1; }
+    const y = d3.scaleLinear().domain([yLo, yHi]).range([CHART_H - 4, 4]);
+
+    const area = d3.area().x((d, i) => x(i)).y0(d => y(d[0])).y1(d => y(d[1])).curve(d3.curveBasis);
+
+    const defs = svg.append('defs');
+    shownIdx.forEach(bi => {
+	const b = bandOrder[bi];
+	const t = DATA.bandTexture[b];
+	if (!t) return;
+	const pat = defs.append('pattern')
+	      .attr('id', 'tspat_' + bi).attr('patternUnits', 'userSpaceOnUse')
+	      .attr('width', t.spacing).attr('height', t.spacing)
+	      .attr('patternTransform', 'rotate(' + t.angle + ')');
+	pat.append('rect').attr('width', t.spacing).attr('height', t.spacing).attr('fill', '#20242c');
+	pat.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', t.spacing)
+	    .attr('stroke', t.tone).attr('stroke-width', t.weight || 1.4);
+    });
+
+    const TS_DIM = 0.12;
+    svg.selectAll('path.ts-area')
+        .data(stacked)
+        .join('path')
+        .attr('class', 'ts-area')
+        .attr('fill', d => tsIsTextured(bandOrder[d.key]) ? 'url(#tspat_' + d.key + ')' : DATA.bandColor[bandOrder[d.key]])
+        .attr('fill-opacity', d => {
+	    if (tsFocusedBand !== null && d.key !== tsFocusedBand) return TS_DIM;
+	    return tsIsTextured(bandOrder[d.key]) ? 1 : 0.92;
+	})
+        .attr('stroke', d => (tsFocusedBand === d.key) ? '#fff' : '#14171c')
+        .attr('stroke-width', d => (tsFocusedBand === d.key) ? 1.5 : 1)
+        .attr('d', area);
+
+    // With only one topic in view, its area can pinch down to an
+    // imperceptible sliver at any bin with just 1-2 records (or vanish
+    // entirely between two such bins) -- a dot at every non-empty bin, sized
+    // to its count, guarantees each data point stays visible even then.
+    if (shownIdx.length === 1) {
+	const bi0 = shownIdx[0];
+	const b0 = bandOrder[bi0];
+	const layer0 = stacked[0];
+	const dotColor = tsIsTextured(b0) ? DATA.bandTexture[b0].tone : DATA.bandColor[b0];
+	const dotData = bins.map((bin, i) => ({ i, n: series[bi0][i], y0: layer0[i][0], y1: layer0[i][1] }))
+	      .filter(d => d.n > 0);
+	svg.selectAll('circle.ts-dot')
+	    .data(dotData)
+	    .join('circle')
+	    .attr('class', 'ts-dot')
+	    .attr('cx', d => x(d.i))
+	    .attr('cy', d => y((d.y0 + d.y1) / 2))
+	    .attr('r', d => Math.max(2.5, Math.min(5, 1.5 + Math.sqrt(d.n))))
+	    .attr('fill', dotColor)
+	    .attr('stroke', '#14171c')
+	    .attr('stroke-width', 1)
+	    .attr('fill-opacity', (tsFocusedBand !== null && tsFocusedBand !== bi0) ? TS_DIM : 1);
+    }
+
+    // --- year axis beneath the chart -- a handful of evenly-spaced bin
+    // boundaries (first bin's start year, last bin's end year, and up to 3
+    // in between), never every bin: with as few as 1-2 bins (a tightly
+    // clustered pinned location) that would just repeat the same year. -------
+    const nTicksWanted = Math.min(5, bins.length);
+    const tickBinIdx = [...new Set(
+	bins.length <= nTicksWanted
+	    ? bins.map((_, i) => i)
+	    : Array.from({ length: nTicksWanted }, (_, k) => Math.round(k * (bins.length - 1) / (nTicksWanted - 1)))
+    )];
+    const axisG = svg.append('g').attr('class', 'ts-axis');
+    axisG.append('line')
+        .attr('x1', 0).attr('x2', width).attr('y1', CHART_H + 1).attr('y2', CHART_H + 1)
+        .attr('stroke', '#2c333b').attr('stroke-width', 1);
+    axisG.selectAll('text')
+        .data(tickBinIdx)
+        .join('text')
+        .attr('x', i => x(i))
+        .attr('y', CHART_H + AXIS_H - 4)
+        .attr('text-anchor', i => i === 0 ? 'start' : (i === bins.length - 1 ? 'end' : 'middle'))
+        .attr('fill', '#6b7178')
+        .attr('font-size', '9px')
+        .text(i => i === 0 ? bins[i].s : (i === bins.length - 1 ? bins[i].e : bins[i].s));
+
+    // --- legend: clickable to isolate a topic in the chart above, hoverable
+    // for its date range -- rebuilt (and re-listened) on every render since
+    // the shown topics themselves can change as the map pans. -----------------
+    legendEl.classList.toggle('ts-has-focus', tsFocusedBand !== null);
+    legendEl.innerHTML = shownIdx.map(bi => {
+	const b = bandOrder[bi];
+	const on = bi === tsFocusedBand;
+	return '<div class="ts-item' + (on ? ' ts-focused' : '') + '" data-band="' + bi + '" tabindex="0" ' +
+	    'role="button" aria-pressed="' + on + '" title="' + escapeHtml(DATA.bandLabel[b]) + ': ' +
+	    bandTotal[bi] + ' record(s), ' + escapeHtml(tsYearSpanText(bandYearMin[bi], bandYearMax[bi])) + '">' +
+	    '<span class="ts-swatch" style="' + tsSwatchStyle(b) + '"></span>' +
+	    '<span class="ts-label">' + escapeHtml(DATA.bandLabel[b]) + '</span>' +
+	    '<span class="ts-meta">' + bandTotal[bi] + ' · ' + tsYearSpanText(bandYearMin[bi], bandYearMax[bi]) + '</span>' +
+	    '</div>';
+    }).join('');
+    legendEl.querySelectorAll('.ts-item').forEach(el => {
+	const bi = Number(el.dataset.band);
+	el.addEventListener('click', () => setTsFocus(bi));
+	el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTsFocus(bi); } });
+	el.addEventListener('mouseenter', () => tsHoverDetail(bi, bandOrder, bandTotal, bandYearMin, bandYearMax, records.length));
+	el.addEventListener('mouseleave', tsSetHoverDefault);
+	el.addEventListener('focus', () => tsHoverDetail(bi, bandOrder, bandTotal, bandYearMin, bandYearMax, records.length));
+	el.addEventListener('blur', tsSetHoverDefault);
+    });
+    document.getElementById('topicStreamFocusClear').onclick = () => setTsFocus(tsFocusedBand);
+
+    if (tsFocusedBand !== null) {
+	const b = bandOrder[tsFocusedBand];
+	focusHintEl.classList.add('show');
+	document.getElementById('topicStreamFocusText').textContent =
+	    'Focused: ' + DATA.bandLabel[b] + ' (' + bandTotal[tsFocusedBand] + ')';
+    } else {
+	focusHintEl.classList.remove('show');
+    }
+    tsSetHoverDefault();
+
+    labelEl.textContent = yearRecs.length + ' dated record(s) spanning ' + yMin + '–' + yMax +
+	(hiddenCount ? ' — ' + hiddenCount + ' smaller topic(s) not charted here' : '') + '.';
+}
+
+function updateSunburstForCurrentView() {
+    const records = recomputeVisibleRecords();
+    const { tree, headingCount } = buildTreeFromRecords(records);
+    renderSunburst(tree);
+    document.getElementById('sunburstStats').textContent =
+	records.length + ' record(s) currently visible on the map, ' + headingCount + ' subject-heading instance(s)';
+    document.getElementById('sunSearchMsg').textContent = '';
+    renderTopicStream(records);
+}
+
+function scheduleSunburstUpdate() {
+    if (pinnedRecords) return; // a location is pinned -- ignore live map-view updates until unpinned
+    clearTimeout(sunDebounceTimer);
+    sunDebounceTimer = setTimeout(updateSunburstForCurrentView, 220);
+}
+
+map.on('moveend', scheduleSunburstUpdate);
+
+// --- click-a-circle-on-the-map "pin" mode --------------------------------
+// Clicking any marker (aboutness, ancient, or publication-place) pins the
+// right panel to just that location's records: its subject-heading tree
+// plus a small histogram of the publication years of those records. Pans,
+// slider drags, and layer toggles no longer touch the panel while pinned;
+// "Back to current view" (or clicking empty map, or clicking a different
+// marker) returns to the live map-driven view.
+function buildClientHistogram(years, maxBins) {
+    if (!years.length) return null;
+    const yMin = Math.min(...years), yMax = Math.max(...years);
+    const span = yMax - yMin + 1;
+    const nBins = Math.max(1, Math.min(maxBins, span));
+    const binSize = Math.ceil(span / nBins);
+    const bins = [];
+    for (let s = yMin; s <= yMax; s += binSize) bins.push({ s, e: Math.min(yMax, s + binSize - 1), n: 0 });
+    for (const y of years) bins[Math.min(bins.length - 1, Math.floor((y - yMin) / binSize))].n++;
+    return bins;
+}
+
+function renderPinnedPubHistogram(records) {
+    const years = records.map(r => r.pubY).filter(y => y !== null);
+    const section = document.getElementById('pinPubSection');
+    if (!years.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    const bins = buildClientHistogram(years, 40);
+    drawHistogram(document.getElementById('pinPubHist'), bins, '#8bd17c', '#8bd17c', -Infinity, Infinity);
+    const yMin = Math.min(...years), yMax = Math.max(...years);
+    document.getElementById('pinPubHistLabel').textContent =
+	years.length + ' of ' + records.length + ' record(s) here have a known publication year, spanning ' + fmtRange(yMin, yMax);
+}
+
+function ensurePinMap() {
+    if (pinMap) return;
+    pinMap = L.map('pinPubMap', { worldCopyJump: true, zoomControl: false, attributionControl: false })
+        .setView([48.5, 32.5], 2);
+    // See the main map's tileLayer above for why this switched away from CARTO.
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+	attribution: 'Esri, HERE, Garmin, FAO, NOAA, USGS &copy; OpenStreetMap contributors, GIS User Community',
+	maxZoom: 16
+    }).addTo(pinMap);
+    pinMapLayer = L.layerGroup().addTo(pinMap);
+}
+
+function renderPinnedPubMap(records) {
+    const section = document.getElementById('pinPubMapSection');
+    const byPlace = new Map();
+    let unknownCount = 0;
+    for (const r of records) {
+	if (r.pubP.length === 0) { unknownCount++; continue; }
+	let any = false;
+	for (const place of r.pubP) {
+	    const xy = placeXY(place);
+	    if (!xy) continue;
+	    any = true;
+	    let acc = byPlace.get(place);
+	    if (!acc) { acc = { lat: xy[0], lon: xy[1], n: 0 }; byPlace.set(place, acc); }
+	    acc.n++;
+	}
+	if (!any) unknownCount++;
+    }
+    if (!byPlace.size) {
+	section.style.display = 'none';
+	return;
+    }
+    section.style.display = 'block';
+    ensurePinMap();
+    pinMap.invalidateSize();
+    pinMapLayer.clearLayers();
+    const bounds = [];
+    for (const [place, acc] of byPlace) {
+	const m = L.circleMarker([acc.lat, acc.lon], {
+	    radius: radiusFor(acc.n), color: '#3f8a35', weight: 1,
+	    fillColor: '#8bd17c', fillOpacity: 0.7
+	});
+	m.bindTooltip(escapeHtml(place) + ' (' + acc.n + ' record' + (acc.n === 1 ? '' : 's') + ')', { direction: 'top', sticky: true });
+	m.addTo(pinMapLayer);
+	bounds.push([acc.lat, acc.lon]);
+    }
+    if (bounds.length === 1) {
+	pinMap.setView(bounds[0], 5);
+    } else {
+	pinMap.fitBounds(L.latLngBounds(bounds), { padding: [24, 24], maxZoom: 6 });
+    }
+    document.getElementById('pinPubMapLabel').textContent =
+	byPlace.size + ' known publication place(s)' +
+	(unknownCount ? ' — ' + unknownCount + ' record(s) with no mapped place' : '');
+}
+
+function renderPinnedSubjects() {
+    const { tree, headingCount } = buildTreeFromRecords(pinnedRecords);
+    renderSunburst(tree);
+    document.getElementById('sunburstStats').textContent =
+	pinnedRecords.length + ' record(s) at this location, ' + headingCount + ' subject-heading instance(s)';
+    document.getElementById('sunSearchMsg').textContent = '';
+    renderTopicStream(pinnedRecords);
+    renderPinnedEgoNetwork();
+    renderPinnedPubHistogram(pinnedRecords);
+    renderPinnedPubMap(pinnedRecords);
+    renderPinnedBooks(pinnedRecords);
+}
+
+// The actual list of records behind a pinned marker/hexbin -- titles link
+// out to the LC permalink (lccn.loc.gov) so this doubles as a way to
+// actually open a record, not just see aggregate stats about it.
+function renderPinnedBooks(records) {
+    const section = document.getElementById('pinBooksSection');
+    if (!records || !records.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    document.getElementById('pinBooksTitle').textContent = 'Books at this location (' + records.length + ')';
+    const sortMode = document.querySelector('input[name="pinBooksSort"]:checked').value;
+    const recs = records.slice().sort((a, b) => {
+	if (sortMode === 'alpha') return (a.title || '').localeCompare(b.title || '');
+	const ay = a.pubY, by = b.pubY;
+	if (ay == null && by == null) return 0;
+	if (ay == null) return 1;
+	if (by == null) return -1;
+	return sortMode === 'yearNew' ? by - ay : ay - by;
+    });
+    const listEl = document.getElementById('pinBooksList');
+    listEl.innerHTML = '';
+    recs.forEach(r => {
+	const row = document.createElement('div');
+	row.className = 'kw-title-row';
+	const yr = r.pubY != null ? r.pubY : '—';
+	const place = r.pubP && r.pubP.length ? r.pubP.join(', ') : '';
+	row.innerHTML =
+	    '<span class="kw-title-text"><a href="https://lccn.loc.gov/' + encodeURIComponent(r.id) +
+	    '" target="_blank" rel="noopener" title="Open this record on loc.gov">' +
+	    escapeHtml(r.title || '(untitled)') + '</a>' +
+	    (place ? '<div class="kw-title-place">' + escapeHtml(place) + '</div>' : '') +
+	    '</span><span class="kw-title-year">' + yr + '</span>';
+	listEl.appendChild(row);
+    });
+}
+document.querySelectorAll('input[name="pinBooksSort"]').forEach(el => {
+    el.addEventListener('change', () => { if (pinnedRecords) renderPinnedBooks(pinnedRecords); });
+});
+
+// Ego-centric network stats for whichever place is pinned: pulled from the
+// same shared community/core-number/adjacency data the Network view and the
+// map's "color by community" mode use, recomputed here on demand so this
+// works even when neither of those is currently switched on (e.g. pinning a
+// bubble straight off the Map view).
+function renderPinnedEgoNetwork() {
+    const section = document.getElementById('pinEgoSection');
+    const body = document.getElementById('pinEgoBody');
+    if (!pinnedLabel) { section.style.display = 'none'; return; }
+    updateCommunityAssignments();
+    section.style.display = 'block';
+    const node = networkNodeById.get(pinnedLabel);
+    if (!node) {
+	body.innerHTML = '<div class="sub">Not part of the current network -- ' +
+	    'it only connects to other places (by subject co-occurrence or shared publishing subjects) ' +
+	    'outside the active layers, date range, or language filter, or it has no such connection at all.</div>';
+	return;
+    }
+    const ego = computeEgoStats(pinnedLabel, networkAdjacency);
+    const coreNum = networkCoreNumbers.get(pinnedLabel) || 0;
+    const commId = communityByName.get(pinnedLabel);
+    const commStat = networkCommunityStats.find(c => c.id === commId);
+    const tier = networkMaxCore <= 0 ? '' :
+	  coreNum >= networkMaxCore ? ' (deepest core)' :
+	  coreNum <= 1 ? ' (periphery)' : ' (mid-tier)';
+    const clusterTxt = ego.clustering === null ? 'n/a (fewer than 2 connections)' :
+	  (ego.clustering * 100).toFixed(0) + '%' + (
+	      ego.clustering >= 0.4
+	          ? ' — its neighbors are mostly interconnected too (a tight local cluster)'
+	          : ' — its neighbors are mostly independent of each other (this place bridges otherwise-separate parts of the network)'
+	  );
+    const topChips = ego.topNeighbors.slice(0, 10).map(nb =>
+	'<span data-name="' + escapeHtml(nb.id) + '">' + escapeHtml(nb.id) + ' (' + nb.weight + ')</span>'
+    ).join('') || '<span class="sub">none</span>';
+    const btw = networkBetweenness.get(pinnedLabel) || 0;
+    const btwRank = networkGraphNodes.length
+          ? networkGraphNodes.slice().sort((a, b) => (b.betweenness || 0) - (a.betweenness || 0))
+          .findIndex(n => n.id === pinnedLabel) + 1
+          : 0;
+    body.innerHTML =
+	'<div><b>' + ego.degree + '</b> connected place(s) &middot; coreness <b>' + coreNum + '</b>' +
+	(networkMaxCore ? ' of ' + networkMaxCore + tier : '') +
+	(commStat ? '<br>Community: <span class="community-swatch" style="display:inline-block;vertical-align:middle;margin-right:3px;background:' +
+	 communityColor(commId) + '"></span>#' + (commId + 1) + ' (' + commStat.members.length + ' place(s))' : '') +
+	'<br>Ego-network density: ' + clusterTxt +
+	'<br>Bridge score (betweenness): ' + btw.toFixed(4) + ' — ranks ' + btwRank + ' of ' + networkGraphNodes.length +
+	(btwRank > 0 && btwRank <= 10 ? ' (a genuine structural bridge)' : '') + '</div>' +
+	'<div class="sub" style="margin-top:5px;">Most-connected places (co-occurring records):</div>' +
+	'<div class="members">' + topChips + '</div>';
+    body.querySelectorAll('.members span[data-name]').forEach(chip => {
+	chip.addEventListener('click', () => {
+	    const nbNode = networkNodeById.get(chip.dataset.name);
+	    if (nbNode) pinLocation(nbNode.id, nbNode.records);
+	});
+    });
+}
+
+function pinLocation(label, records) {
+    pinnedRecords = records;
+    pinnedLabel = label;
+    document.getElementById('pinBanner').style.display = 'flex';
+    document.getElementById('pinLabel').innerHTML =
+	'Pinned: <b>' + escapeHtml(label) + '</b> (' + records.length + ' record' + (records.length === 1 ? '' : 's') + ')';
+    renderPinnedSubjects();
+    if (networkNodesSel) networkNodesSel.classed('pinned-node', d => d.id === pinnedLabel);
+}
+
+function unpinLocation() {
+    pinnedRecords = null;
+    pinnedLabel = null;
+    document.getElementById('pinBanner').style.display = 'none';
+    document.getElementById('pinEgoSection').style.display = 'none';
+    document.getElementById('pinPubSection').style.display = 'none';
+    document.getElementById('pinPubMapSection').style.display = 'none';
+    document.getElementById('pinBooksSection').style.display = 'none';
+    updateSunburstForCurrentView();
+    if (networkNodesSel) networkNodesSel.classed('pinned-node', false);
+}
+
+document.getElementById('pinBackBtn').addEventListener('click', unpinLocation);
+map.on('click', () => { if (pinnedRecords) unpinLocation(); });
+
+// --- keyword-search map filter ---------------------------------------
+// Search itself deliberately ignores the current filters/timeline (see the
+// comment below), which means the results list used to point at locations
+// nowhere near what's currently drawn on the map -- from the map's point of
+// view a search did nothing at all. This closes that gap by restricting the
+// about/ancient layers to just the matched geonames (via searchGeonameFilter,
+// declared above) and redrawing them through the SAME renderModernRange/
+// renderAncient functions every other filter uses -- so a search actually
+// replaces what's on the map with just the relevant markers, in their normal
+// style (bubbles/hex/heat, whichever is active), rather than piling a second
+// set of special-colored markers on top of everything already there.
+function clearSearchFilter() {
+    if (!searchGeonameFilter && !searchRecordFilter) return;
+    searchGeonameFilter = null;
+    searchRecordFilter = null;
+    renderModernRange(currentAboutRange[0], currentAboutRange[1]);
+    renderAncient(currentAboutRange[0], currentAboutRange[1]);
+    renderPubRange(currentPubRange[0], currentPubRange[1]);
+    updateSearchBanner(null);
+}
+// Takes the actual matched GROUP OBJECTS (each { name, records, ... } --
+// records is the list of records that matched under that geoname; the
+// NO_ABOUT_LOCATION pseudo-group's records have no plottable geoname at all)
+// -- not just names -- so the resulting filter can be record-ID-aware, not
+// just geoname-aware. See searchGeonameFilter/searchRecordFilter above for
+// why that distinction matters.
+function applySearchFilter(groups) {
+    const geoMap = new Map();
+    const recIds = new Set();
+    for (const grp of groups) {
+	if (grp.name !== NO_ABOUT_LOCATION) {
+	    let s = geoMap.get(grp.name);
+	    if (!s) { s = new Set(); geoMap.set(grp.name, s); }
+	    for (const r of grp.records) { s.add(r.id); recIds.add(r.id); }
+	} else {
+	    for (const r of grp.records) recIds.add(r.id);
+	}
+    }
+    searchGeonameFilter = geoMap;
+    searchRecordFilter = recIds;
+    renderModernRange(currentAboutRange[0], currentAboutRange[1]);
+    renderAncient(currentAboutRange[0], currentAboutRange[1]);
+    renderPubRange(currentPubRange[0], currentPubRange[1]);
+}
+
+// #leftPanel and #rightPanel are docked ON TOP of the full-bleed #map (see
+// their CSS: position:absolute over the map, not beside it) -- so a plain
+// flyTo/fitBounds that only knows about the map's raw pixel size can happily
+// center a marker exactly underneath one of them. It'll still be visible
+// (the panels are dark but not opaque enough to fully hide markers behind
+// them), but clicks on that spot hit the panel, not the map -- which reads
+// as "I clicked the marker and nothing happened." Measuring the panels'
+// actual widths live (rather than hardcoding them) also covers the
+// right panel's collapsed state, which is much narrower than expanded.
+function panelClearance() {
+    const l = document.getElementById('leftPanel');
+    const r = document.getElementById('rightPanel');
+    return {
+	left: (l ? l.getBoundingClientRect().width : 0) + 40,
+	right: (r ? r.getBoundingClientRect().width : 0) + 40,
+	top: 30, bottom: 30
+    };
+}
+function flyToClearOfPanels(latlngs, multiMaxZoom) {
+    switchToMapView();
+    const c = panelClearance();
+    map.flyToBounds(L.latLngBounds(latlngs), {
+	paddingTopLeft: [c.left, c.top],
+	paddingBottomRight: [c.right, c.bottom],
+	maxZoom: latlngs.length > 1 ? (multiMaxZoom || 7) : Math.max(map.getZoom(), 6)
+    });
+}
+
+// A single far-flung match (a real diaspora location, or -- as happened
+// once -- a bad geocode) can force flyToBounds out to a near-global view,
+// shrinking the actual cluster of relevant markers to invisible specks.
+// Framing on the DENSEST cluster instead (median-anchored, closest 85% by
+// straight-line degree distance, floored at a ~6-degree radius so a tight
+// cluster doesn't get needlessly zoomed past legibility) keeps the view
+// useful for the common case -- outliers are still drawn on the map and
+// still counted in the results, just not allowed to wreck the framing;
+// the caller reports when that happened so it isn't a silent omission.
+function coreBoundsExcludingOutliers(points) {
+    if (points.length <= 2) return points;
+    const lats = points.map(p => p[0]).slice().sort((a, b) => a - b);
+    const lons = points.map(p => p[1]).slice().sort((a, b) => a - b);
+    const medLat = lats[Math.floor(lats.length / 2)];
+    const medLon = lons[Math.floor(lons.length / 2)];
+    const dist = (p) => Math.hypot(p[0] - medLat, p[1] - medLon);
+    const sortedDist = points.map(dist).slice().sort((a, b) => a - b);
+    const keepCount = Math.max(1, Math.ceil(sortedDist.length * 0.85));
+    const cutoff = Math.max(sortedDist[keepCount - 1], 6);
+    const core = points.filter(p => dist(p) <= cutoff);
+    return core.length ? core : points;
+}
+
+function renderSearchHighlight(groups) {
+    const bounds = [];
+    for (const grp of groups) {
+	if (grp.name === NO_ABOUT_LOCATION) continue;
+	const xy = geonameXY(grp.name) || placeXY(grp.name);
+	if (!xy) continue;
+	bounds.push(xy);
+    }
+    applySearchFilter(groups);
+    let offScreenCount = 0;
+    if (bounds.length) {
+	const framingBounds = coreBoundsExcludingOutliers(bounds);
+	offScreenCount = bounds.length - framingBounds.length;
+	flyToClearOfPanels(framingBounds);
+    }
+    return { shown: bounds.length, offScreen: offScreenCount };
+}
+
+// Small status strip, docked in the left panel just under the search box, so
+// "the map is currently filtered by a search" stays visible even after the
+// results list/modal is closed -- previously the ONLY sign a search filter
+// was still active was that modal, so closing it made the filter feel like
+// it had silently vanished (it hadn't -- but nothing on screen said so).
+// label === null hides the strip and means no filter is active.
+function updateSearchBanner(label, canReopen) {
+    const banner = document.getElementById('kwActiveBanner');
+    const text = document.getElementById('kwActiveBannerText');
+    const viewBtn = document.getElementById('kwActiveBannerView');
+    if (!banner || !text) return;
+    if (!label) { banner.classList.remove('active'); return; }
+    text.textContent = label;
+    if (viewBtn) viewBtn.style.display = canReopen ? '' : 'none';
+    banner.classList.add('active');
+}
+
+// --- keyword search: title / subject headings / place names -- intersected
+// with the SAME "what's currently visible" filters as everything else in
+// this app (timeline, ancient/modern toggle, language), so the results
+// list, the map, and the timeline slider never disagree about what counts
+// as a match (see doKeywordSearch below for exactly how). Results are
+// grouped by subject place (the geonames a record is ABOUT -- the same
+// concept the map/network views are built from), since that's the grouping
+// a "locations, with titles under them" request is asking for; a record
+// about more than one (in-range) place appears under each of them.
+const NO_ABOUT_LOCATION = '(no subject location on this record)';
+let kwCurrentGroups = [];
+let kwCurrentQuery = '';
+
+// Records with zero temporal-aboutness mentions -- these can never appear
+// on the "Temporal aboutness" layer (there's no place+date to plot), so
+// without this they'd be invisible everywhere except by chance, via a
+// keyword search that happens to match one. Computed once up front since
+// it doesn't depend on any active filter/range.
+const noAboutRecords = DATA.records.filter(r => r.about.length === 0);
+document.getElementById('noAboutSummary').textContent =
+    noAboutRecords.length + ' of ' + DATA.records.length +
+    ' record(s) in the whole collection have no temporal-aboutness data at all';
+document.getElementById('noAboutBtn').addEventListener('click', () => {
+    kwCurrentGroups = [{ name: NO_ABOUT_LOCATION, records: noAboutRecords }];
+    kwCurrentQuery = '';
+    clearSearchFilter(); // this group is placeless by definition -- nothing to filter the map to
+    document.getElementById('kwResultsTitle').textContent = 'Records with no temporal-aboutness data';
+    document.getElementById('kwResultsSummary').textContent =
+	noAboutRecords.length + ' of ' + DATA.records.length + ' records have no place-with-date subject heading ' +
+	'at all, so they never appear on the "Temporal aboutness" layer, at any date range. Most are biographies ' +
+	'or bibliographies (subject headings about a PERSON, not a place) -- the publication-year timeline still ' +
+	'includes them normally.';
+    renderKeywordResults();
+    document.getElementById('kwResultsOverlay').classList.add('open');
+});
+
+function kwSearchText(r) {
+    if (r.__kwText) return r.__kwText;
+    const headText = r.heads.map(h => h.join(' -- ')).join(' | ');
+    const aboutText = r.about.map(m => m.g).join(' | ');
+    const pubText = r.pubP.join(' | ');
+    r.__kwText = [r.title || '', headText, aboutText, pubText].join(' \n ').toLowerCase();
+    return r.__kwText;
+}
+
+// Where the match actually came from, for records whose TITLE doesn't
+// contain the term -- so a hit via a subject heading or a place name
+// isn't mistaken for a title match.
+function kwMatchReason(r, q) {
+    if ((r.title || '').toLowerCase().includes(q)) return null;
+    for (const h of r.heads) {
+	const t = h.join(' -- ');
+	if (t.toLowerCase().includes(q)) return 'subject heading: ' + t;
+    }
+    for (const m of r.about) {
+	if (m.g.toLowerCase().includes(q)) return 'about: ' + m.g;
+    }
+    for (const p of r.pubP) {
+	if (p.toLowerCase().includes(q)) return 'published in: ' + p;
+    }
+    return null;
+}
+
+function kwHighlight(text, q) {
+    const t = escapeHtml(text);
+    if (!q) return t;
+    const idx = t.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return t;
+    return t.slice(0, idx) + '<mark>' + t.slice(idx, idx + q.length) + '</mark>' + t.slice(idx + q.length);
+}
+
+// Search is intersected with the SAME filters the map itself is currently
+// using -- the temporal-aboutness timeline, the modern/ancient toggles, the
+// language filter, and (if "intersect timelines" is on) the publication
+// range -- so the results list, the map, and the timeline slider always
+// describe the exact same set of records instead of quietly disagreeing
+// (a record can only match if it has an about-mention that ALSO overlaps
+// the current timeline). The one exception: records with NO about-mention
+// at all (biographies, etc.) can never be plotted regardless of the
+// timeline, so they're unaffected by it, same as before -- they're not
+// part of the map/timeline consistency this is fixing.
+function doKeywordSearch() {
+    const qRaw = document.getElementById('kwSearchInput').value.trim();
+    const msg = document.getElementById('kwSearchMsg');
+    if (!qRaw) { msg.textContent = 'Type a term to search for.'; return; }
+    const q = qRaw.toLowerCase();
+    const rawMatches = DATA.records.filter(r => kwSearchText(r).includes(q));
+    if (!rawMatches.length) {
+	msg.textContent = 'No records match “' + qRaw + '”.';
+	kwCurrentGroups = [];
+	clearSearchFilter();
+	return;
+    }
+
+    const showModern = document.getElementById('toggleModern').checked;
+    const showAncient = document.getElementById('toggleAncient').checked;
+    const [aLo, aHi] = currentAboutRange;
+    const requirePub = intersectRequiresPub();
+
+    const groups = new Map(); // geoname (or NO_ABOUT_LOCATION) -> {name, recordSet, records}
+    let inRangeCount = 0, outOfRangeCount = 0;
+    for (const r of rawMatches) {
+	if (!recordPassesLanguageFilter(r)) continue;
+	if (requirePub && !recordHasPubInRange(r)) continue;
+	if (!r.about.length) {
+	    let grp = groups.get(NO_ABOUT_LOCATION);
+	    if (!grp) { grp = { name: NO_ABOUT_LOCATION, recordSet: new Set(), records: [] }; groups.set(NO_ABOUT_LOCATION, grp); }
+	    if (!grp.recordSet.has(r.id)) { grp.recordSet.add(r.id); grp.records.push(r); }
+	    inRangeCount++;
+	    continue;
+	}
+	const geonames = [];
+	const seen = new Set();
+	for (const m of r.about) {
+	    const isAncient = m.s < DATA.ancientCutoff;
+	    if (isAncient && !showAncient) continue;
+	    if (!isAncient && !showModern) continue;
+	    if (!(m.s <= aHi && m.e >= aLo)) continue;
+	    if (!seen.has(m.g)) { seen.add(m.g); geonames.push(m.g); }
+	}
+	if (!geonames.length) { outOfRangeCount++; continue; }
+	inRangeCount++;
+	for (const g of geonames) {
+	    let grp = groups.get(g);
+	    if (!grp) { grp = { name: g, recordSet: new Set(), records: [] }; groups.set(g, grp); }
+	    if (!grp.recordSet.has(r.id)) { grp.recordSet.add(r.id); grp.records.push(r); }
+	}
+    }
+
+    if (!inRangeCount) {
+	msg.textContent = outOfRangeCount
+	    ? outOfRangeCount + ' record(s) match “' + qRaw + '” but none fall inside the current timeline (' +
+	    fmtRange(aLo, aHi) + ') — widen the date range, or toggle Ancient/medieval, to see them.'
+	    : 'No records match “' + qRaw + '” with the current language/timeline filters.';
+	kwCurrentGroups = [];
+	clearSearchFilter();
+	return;
+    }
+    msg.textContent = '';
+    kwCurrentGroups = Array.from(groups.values());
+    kwCurrentQuery = qRaw;
+    const locCount = kwCurrentGroups.filter(g => g.name !== NO_ABOUT_LOCATION).length;
+    const { shown: shownCount, offScreen } = renderSearchHighlight(kwCurrentGroups);
+    document.getElementById('kwResultsTitle').textContent = 'Search: “' + qRaw + '”';
+    document.getElementById('kwResultsSummary').textContent =
+	inRangeCount + ' record' + (inRangeCount === 1 ? '' : 's') + ' matched within the current timeline & filters, across ' + locCount +
+	' subject location' + (locCount === 1 ? '' : 's') +
+	(groups.has(NO_ABOUT_LOCATION) ? ' (plus ' + groups.get(NO_ABOUT_LOCATION).records.length + ' with no subject location on record)' : '') +
+	' — searched titles, subject headings, and place names, restricted to the active timeline (' + fmtRange(aLo, aHi) + ') and language filter.' +
+	(outOfRangeCount ? ' ' + outOfRangeCount + ' more record(s) matched the term but fall outside the current timeline/filters, so aren’t shown.' : '') +
+	' ' +
+	(shownCount
+	 ? 'The map now shows ' + shownCount + ' matching location(s) (switch to Map view, or close this panel to see it)' +
+	 (offScreen ? ' — ' + offScreen + ' of them ' + (offScreen === 1 ? 'is' : 'are') + ' far enough away that the initial view is zoomed to the main cluster instead; zoom/pan out to find ' + (offScreen === 1 ? 'it' : 'them') + '.' : '.') +
+	 ' Hit Clear to bring back the full map.'
+	 : locCount
+	 ? 'None of those locations have known map coordinates, so the map is unchanged this time.'
+	 : '');
+    updateSearchBanner('🔎 “' + qRaw + '” — ' + inRangeCount + ' record' + (inRangeCount === 1 ? '' : 's') +
+		       ' matched, map showing ' + (shownCount || 0) + ' location' + (shownCount === 1 ? '' : 's') +
+		       (offScreen ? ' (' + offScreen + ' off-screen)' : ''), true);
+    renderKeywordResults();
+    document.getElementById('kwResultsOverlay').classList.add('open');
+}
+
+function renderKeywordResults() {
+    const sortLoc = document.querySelector('input[name="kwSortLoc"]:checked').value;
+    const sortTitle = document.querySelector('input[name="kwSortTitle"]:checked').value;
+    const real = kwCurrentGroups.filter(g => g.name !== NO_ABOUT_LOCATION);
+    const none = kwCurrentGroups.filter(g => g.name === NO_ABOUT_LOCATION);
+    real.sort(sortLoc === 'alpha'
+	      ? (a, b) => a.name.localeCompare(b.name)
+	      : (a, b) => b.records.length - a.records.length || a.name.localeCompare(b.name));
+    const groups = real.concat(none);
+    const q = kwCurrentQuery.toLowerCase();
+
+    const listEl = document.getElementById('kwResultsList');
+    listEl.innerHTML = '';
+    groups.forEach(grp => {
+	const recs = grp.records.slice().sort((a, b) => {
+	    if (sortTitle === 'alpha') return (a.title || '').localeCompare(b.title || '');
+	    const ay = a.pubY, by = b.pubY;
+	    if (ay == null && by == null) return 0;
+	    if (ay == null) return 1;
+	    if (by == null) return -1;
+	    return sortTitle === 'yearNew' ? by - ay : ay - by;
+	});
+	const isReal = grp.name !== NO_ABOUT_LOCATION;
+	const div = document.createElement('div');
+	div.className = 'kw-group';
+	if (isReal) div.dataset.clickable = '1';
+	const header = document.createElement('div');
+	header.className = 'kw-group-header';
+	header.innerHTML = '<b>' + (isReal ? kwHighlight(grp.name, q) : escapeHtml(grp.name)) + '</b>' +
+	    '<span class="kw-count">' + recs.length + ' record' + (recs.length === 1 ? '' : 's') + '</span>';
+	if (isReal) {
+	    header.title = 'Pin this location in the Subjects panel and go to it on the map';
+	    header.addEventListener('click', () => {
+		closeKeywordResults();
+		pinLocation(grp.name, grp.records);
+		const xy = geonameXY(grp.name) || placeXY(grp.name);
+		if (xy) {
+		    applySearchFilter([grp]);
+		    flyToClearOfPanels([xy]);
+		    updateSearchBanner('🔎 “' + kwCurrentQuery + '” → ' + grp.name + ' (' + grp.records.length + ' record' + (grp.records.length === 1 ? '' : 's') + ')', true);
+		}
+	    });
+	}
+	div.appendChild(header);
+	const list = document.createElement('div');
+	list.className = 'kw-title-list';
+	recs.forEach(r => {
+	    const row = document.createElement('div');
+	    row.className = 'kw-title-row';
+	    const yr = r.pubY != null ? r.pubY : '—';
+	    const reason = kwMatchReason(r, q);
+	    row.innerHTML = '<span class="kw-title-text">' + kwHighlight(r.title || '(untitled)', q) +
+		(reason ? '<div class="kw-title-match">matched via ' + kwHighlight(reason, q) + '</div>' : '') +
+		'</span><span class="kw-title-year">' + yr + '</span>';
+	    row.title = 'Pin this location in the Subjects panel and go to it on the map';
+	    row.addEventListener('click', () => {
+		closeKeywordResults();
+		pinLocation(grp.name, grp.records);
+		const xy = isReal ? (geonameXY(grp.name) || placeXY(grp.name)) : null;
+		if (xy) {
+		    applySearchFilter([grp]);
+		    flyToClearOfPanels([xy]);
+		    updateSearchBanner('🔎 “' + kwCurrentQuery + '” → ' + grp.name + ' (' + grp.records.length + ' record' + (grp.records.length === 1 ? '' : 's') + ')', true);
+		}
+	    });
+	    list.appendChild(row);
+	});
+	div.appendChild(list);
+	listEl.appendChild(div);
+    });
+}
+
+function switchToMapView() {
+    if (mainView === 'map') return;
+    const radio = document.querySelector('input[name="mainView"][value="map"]');
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+}
+
+function closeKeywordResults() {
+    document.getElementById('kwResultsOverlay').classList.remove('open');
+}
+
+// Undoes everything a search does: the typed term, the results overlay, and
+// (since the map filter deliberately outlives closing the overlay -- see
+// renderSearchHighlight above) the map filter, restoring the full map.
+function clearKeywordSearch() {
+    document.getElementById('kwSearchInput').value = '';
+    document.getElementById('kwSearchMsg').textContent = '';
+    kwCurrentGroups = [];
+    kwCurrentQuery = '';
+    clearSearchFilter();
+    closeKeywordResults();
+}
+
+document.getElementById('kwSearchBtn').addEventListener('click', doKeywordSearch);
+document.getElementById('kwClearBtn').addEventListener('click', clearKeywordSearch);
+document.getElementById('kwSearchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doKeywordSearch(); });
+document.getElementById('kwResultsClose').addEventListener('click', closeKeywordResults);
+document.getElementById('kwResultsOverlay').addEventListener('click', e => { if (e.target.id === 'kwResultsOverlay') closeKeywordResults(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeKeywordResults(); });
+document.getElementById('kwActiveBannerView').addEventListener('click', () => {
+    renderKeywordResults();
+    document.getElementById('kwResultsOverlay').classList.add('open');
+});
+document.getElementById('kwActiveBannerClear').addEventListener('click', clearKeywordSearch);
+document.querySelectorAll('input[name="kwSortLoc"], input[name="kwSortTitle"]').forEach(input => {
+    input.addEventListener('change', renderKeywordResults);
+});
+
+let resizeDebounceTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeDebounceTimer);
+    resizeDebounceTimer = setTimeout(() => { sunG = null; updateSunburstForCurrentView(); }, 250);
+});
+
+initSunburstSvg();
+updateSunburstForCurrentView();
+
+
+return {
+    destroy() {
+	try { map.remove(); } catch (e) { /* already removed */ }
+	try { if (typeof pinMap !== 'undefined' && pinMap) pinMap.remove(); } catch (e) { /* already removed or never opened */ }
+    },
+};
+}

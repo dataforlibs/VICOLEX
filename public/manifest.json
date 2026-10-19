@@ -1,0 +1,9 @@
+{
+  "short_name": "DK508 Ukraine",
+  "name": "DK508 — Mapping Ukraine's History Through a Library Catalog",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0b0d10",
+  "background_color": "#0b0d10"
+}
