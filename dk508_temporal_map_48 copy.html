@@ -741,9 +741,9 @@ function recordPassesLanguageFilter(r) {
 
 // ============================================================ the map ===
 const map = L.map('map', { worldCopyJump: true }).setView([48.5, 32.5], 5);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-  maxZoom: 18, subdomains: 'abcd'
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Esri, HERE, Garmin, FAO, NOAA, USGS &copy; OpenStreetMap contributors, GIS User Community',
+  maxZoom: 16
 }).addTo(map);
 
 function fmtYear(y) { return y < 0 ? (-y) + ' BC' : y + ' AD'; }
@@ -2930,10 +2930,10 @@ function ensurePinMap() {
   if (pinMap) return;
   pinMap = L.map('pinPubMap', { worldCopyJump: true, zoomControl: false, attributionControl: false })
     .setView([48.5, 32.5], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 18, subdomains: 'abcd'
-  }).addTo(pinMap);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Esri, HERE, Garmin, FAO, NOAA, USGS &copy; OpenStreetMap contributors, GIS User Community',
+  maxZoom: 16
+}).addTo(pinMap);
   pinMapLayer = L.layerGroup().addTo(pinMap);
 }
 
