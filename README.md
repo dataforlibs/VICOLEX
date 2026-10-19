@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # DK508 — Mapping Ukraine's History Through a Library Catalog
 
 A Create React App port of four interactive visualizations built from the
@@ -110,3 +111,6 @@ name the repo — no need to edit it before deploying.
   initialized" error. The two D3-only river pages don't hold a persistent
   instance the way Leaflet does, so their cleanup is a no-op beyond
   clearing the container.
+=======
+# VICOLEX
+>>>>>>> 7d08e4e66a0d66daacacfb58e258faf30f9cbca0
