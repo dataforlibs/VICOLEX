@@ -1,0 +1,21 @@
+Dataset: Austro-Hungarian Empire (1910), administrative boundary polygons
+Map asset: dissolved external outline derived from ArcGIS FeatureServer layer 53.
+Output CRS: EPSG:4326.
+
+Source citation provided by the service:
+MPIDR [Max Planck Institute for Demographic Research] and CGG [Chair for
+Geodesy and Geoinformatics, University of Rostock] (2012): MPIDR Population
+History GIS Collection (slightly modified version of a GIS file by Rumpler
+and Seger 2010) – Rostock. Rumpler, H. and Seger, M. (2010):
+Die Habsburgermonarchie 1848–1918. Band IX: Soziale Strukturen. 2. Teilband:
+Die Gesellschaft der Habsburgermonarchie im Kartenbild. Verwaltungs-, Sozial-
+und Infrastrukturen. Nach dem Zensus von 1910, Wien.
+
+Service:
+https://services8.arcgis.com/UN2BoTelitQIJWcd/ArcGIS/rest/services/Austro_Hungarian_Empire_1910_v_1_0/FeatureServer
+Project information and terms:
+https://censusmosaic.demog.berkeley.edu/data/historical-gis-files
+
+The service states that use is permitted for non-commercial scientific
+purposes if users register with the Mosaic project and cite the source.
+Confirm current terms before publishing or redistributing this asset.
