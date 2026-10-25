@@ -1,169 +1,200 @@
 {
- "note": "Time index corrections. Export a new version from the Time editor page (#/time-editor) and replace this file. open = until now.",
- "books": {
-  "2007488836": {
-   "d0": 1776,
-   "d1": 1833,
-   "note": "Title specifies late 18th century through first third of 19th century. Normalized to 1776–1800 and 1801–1833; year endpoints are conventional bounds, not explicit years. Verified against Kyiv Metropolitan Borys Hrinchenko University repository: https://elibrary.kubg.edu.ua/id/eprint/10361/."
-  },
-  "87161759": {
-   "d0": 1,
-   "d1": 50,
-   "note": "Monograph conclusion narrows the burial to the first half through middle of the 1st century CE; approximate inclusive year bounds. Source scan: https://djvu.online/file/v2BnHy2fr2KRY."
-  },
-  "2006202370": {
-   "d0": 2001,
-   "d1": 3000,
-   "note": "Title specifies the 3rd millennium CE. Corrected from the erroneously century-sized 2001–2100 range; millennium bounds are 2001–3000."
-  },
-  "2002408199": {
-   "d0": 1944,
-   "d1": 1950,
-   "note": "Web catalog and bibliographic listings identify this work as Rezistența armată din Bucovina 1944–1950. https://www.targulcartii.ro/gabriel-ciuceanu/rezistenta-armata-din-bucovina"
-  },
-  "2005356804": {
-   "d0": 1927,
-   "d1": 2019,
-   "note": "Record is for Leonid Khadzhinov; biographical source gives his lifespan as 28 April 1927–28 February 2019. https://ru.wikipedia.org/wiki/Хаджинов,_Леонид_Петрович"
-  },
-  "99512741": {
-   "d0": 1921,
-   "d1": 1941,
-   "note": "Bibliographic records identify the work as Очерки истории культуры крымскотатарского народа (1921–1941). https://search.rsl.ru/ru/record/01000615877"
-  },
-  "2001370768": {
-   "d0": 1771,
-   "d1": 1775,
-   "note": "Library catalog assigns the work to the Bucovina annexation/occupation period 1771–1775. https://bibgtkneamt.ebibliophil.ro/cauta/pag/42?prefix=mon&q=Nicolae+Iorga"
-  },
-  "2019279588": {
-   "d0": 1950,
-   "d1": 1959,
-   "note": "The full title specifies Soviet security-service operations in the Rozivskyi district during the 1950s. https://bastion.tv/polyuvannya-za-lyudinoyu-vidano-zbirnik-dokumentiv-radyanskih-specsluzhb_n34145/"
-  },
-  "2014506626": {
-   "d0": 2014,
-   "d1": 2014,
-   "note": "The book description says the chronicle covers fighting in Donbas in spring–autumn 2014. https://www.litres.ru/book/mihail-polikarpov/bitva-za-donbass-igor-strelkov-razgrom-karateley-hroniki-21378089/"
-  },
-  "56052895": {
-   "d0": 1927,
-   "d1": 1927,
-   "note": "Bibliographic sources identify this work as a 1927 publication on cultural construction in Ukraine. https://history.znu.edu.ua/index.php/journal/article/view/1703"
-  },
-  "2020482801": {
-   "d0": 1917,
-   "d1": 1945,
-   "note": "Bibliographic description of Viktor Kirkevich’s volume specifies the Kyiv history period as 1917–1945. https://www.olx.ua/d/uk/obyavlenie/v-kirkevich-istoriya-kieva-v-4-h-knigah-IDSnh4k.html"
-  },
-  "2023042224": {
-   "d0": 1929,
-   "d1": 1934,
-   "note": "Routledge title/description specifies the OUN emigration study covers 1929–1934. https://www.routledge.com/Organisation-of-Ukrainian-Nationalists-on-Emigration-Its-Formation-and/Gibiec/p/book/9781032550831"
-  },
-  "95152999": {
-   "d0": 1901,
-   "d1": 1950,
-   "note": "The Institute of History of Ukraine identifies this work as covering the first half of the 20th century. https://history.org.ua/uk/page/pro-institut"
-  },
-  "2012408751": {
-   "d0": 1920,
-   "d1": 1939,
-   "note": "The book’s described scope is the Ukrainian Greek Catholic Church and nationalist movement in Galicia during the 1920s–1930s. https://lib.in.ua/161981-reczenziia-naczionalizm-i-religiia"
-  },
-  "2003399426": {
-   "d0": 1920,
-   "d1": 1939,
-   "note": "A regional-history source identifies the work as documenting the resistance in Sumy region during the 1920s–1930s. https://history.sumy.ua/research/article/natsionalnyi-sprotyv-na-sumshchyni-dosvid-2030kh-rokiv/"
-  },
-  "2019373281": {
-   "d0": 1913,
-   "d1": 1992,
-   "note": "The Ukrainian Institute of National Memory gives Dariia Rebet’s lifespan as 1913–1992. https://uinp.gov.ua/istorychnyy-kalendar/lyutyy/26/1913-narodylasya-dariya-rebet"
-  },
-  "2011460062": {
-   "d0": 1936,
-   "d1": 1941,
-   "note": "The National Historical Library describes the Bykivnia burial victims as killed and buried there during 1936–1941. https://www.nibu.kyiv.ua/exhibitions/970/"
-  },
-  "2020524890": {
-   "d0": 1901,
-   "d1": 1925,
-   "note": "The monograph covers Ukrainian conservative circles in Galicia in the first quarter of the 20th century and concludes in the mid-1920s. https://chytomo.com/book/na-porozi-modernoho-svitu/"
-  },
-  "99216405": {
-   "d0": 1920,
-   "d1": 1949,
-   "note": "The memoir is described as covering Ukrainian Lviv in the 1920s–1940s. https://irbis-nbuv.gov.ua/E_LIB/PDF/er-0004741.pdf"
-  },
-  "2011479852": {
-   "d0": 1918,
-   "d1": 1939,
-   "note": "The book title specifies Polish land ownership in Volhynia from 1918 to 1939. https://stara-szuflada.pl/Nad-Turia-i-Stochodem-Z-dziejow-polskiej-wlasnosci-ziemskiej-na-Wolyniu-1918-1939-p14784"
-  },
-  "2015431251": {
-   "d0": 1801,
-   "d1": 1991,
-   "note": "The book traces the national idea from its emergence in the early 19th century to Ukraine’s independence in 1991; 1801 is a conventional century boundary. https://www.michaelsbund.de/product/9782875740359-les-ukrainiens-face-a-leur-passe.html"
-  },
-  "00351060": {
-   "d0": 1995,
-   "d1": 1998,
-   "note": "The book includes interviews and essays broadcast in Radio Liberty’s Kalamar program during 1995–1998. https://www.radiosvoboda.org/a/25266725.html"
-  },
-  "2011472690": {
-   "d0": 1930,
-   "d1": 1930,
-   "note": "This pamphlet documents the 1930 Polish pacification of Ukrainians in Galicia. https://www.rulit.me/books/pacifikaciya-read-240112-1.html"
-  },
-  "2023042225": {
-   "d0": 1929,
-   "d1": 1934,
-   "note": "Verified study period from publisher description: title/subtitle states Organisation of Ukrainian Nationalists on Emigration: Its Formation and Transnational Connections in 1929–1934. https://www.routledge.com/Organisation-of-Ukrainian-Nationalists-on-Emigration-Its-Formation-and/Gibiec/p/book/9781032550831"
-  },
-  "2017432680": {
-   "d0": 1920,
-   "d1": 2001,
-   "note": "Narrowed from 1901–2000 using the dissertation record/title, which specifies the 1920s through the beginning of the 21st century. 1920 and 2001 are conventional bounds for those phrases, not explicitly stated endpoint years. https://www.uacademic.info/ua/document/0509U000128"
-  },
-  "00332247": {
-   "d0": 1938,
-   "d1": 1939,
-   "note": "Catalog title is Красне поле: Про Карпатську Україну. The collection concerns the Carpathian Ukrainian state and its March 1939 struggle; the state existed in 1938–1939. https://city-library.uz.ua/vrtualn-vistavki/381-karpatska-ukrana-suchasnij-poglyad-do-80-rchchya-karpatsko-ukrani.html"
-  },
-  "2020007990": {
-   "d0": 1918,
-   "d1": 1939,
-   "note": "Oxford University Press description explicitly dates the Volhynia interwar setting 1918–1939. https://academic.oup.com/book/33499"
-  },
-  "99195622": {
-   "d0": 1991,
-   "d1": 1998,
-   "note": "The report examines Crimea’s regional autonomy in independent Ukraine, beginning with establishment of Crimean ASSR in 1991 and developments through the 1998 report. https://www.ssoar.info/ssoar/handle/document/43615"
-  },
-  "2009460191": {
-   "d0": 1921,
-   "d1": 1923,
-   "note": "The National Academy of Sciences of Ukraine Institute of History record gives the source documents’ coverage explicitly: February 1921 to February 1923. https://resource.history.org.ua/item/0014163"
-  },
-  "2016451986": {
-   "d0": 1917,
-   "d1": 1939,
-   "note": "The Institute of History of Ukraine annotation states the conference collection covers capital-status changes from the Ukrainian People’s Republic through the end of the 1930s. https://resource.history.org.ua/item/10818"
-  },
-  "84200371": {
-   "ranges": [
-    {
-     "d0": 250,
-     "d1": 350
+  "note": "Time index corrections. Export a new version from the Time editor page (#/time-editor) and replace this file. open = until now.",
+  "books": {
+    "2007488836": {
+      "d0": 1776,
+      "d1": 1833,
+      "note": "Title specifies late 18th century through first third of 19th century. Normalized to 1776–1800 and 1801–1833; year endpoints are conventional bounds, not explicit years. Verified against Kyiv Metropolitan Borys Hrinchenko University repository: https://elibrary.kubg.edu.ua/id/eprint/10361/."
     },
-    {
-     "d0": 450,
-     "d1": 500
+    "87161759": {
+      "d0": 1,
+      "d1": 50,
+      "note": "Monograph conclusion narrows the burial to the first half through middle of the 1st century CE; approximate inclusive year bounds. Source scan: https://djvu.online/file/v2BnHy2fr2KRY."
+    },
+    "2006202370": {
+      "d0": 2001,
+      "d1": 3000,
+      "note": "Title specifies the 3rd millennium CE. Corrected from the erroneously century-sized 2001–2100 range; millennium bounds are 2001–3000."
+    },
+    "2002408199": {
+      "d0": 1944,
+      "d1": 1950,
+      "note": "Web catalog and bibliographic listings identify this work as Rezistența armată din Bucovina 1944–1950. https://www.targulcartii.ro/gabriel-ciuceanu/rezistenta-armata-din-bucovina"
+    },
+    "2005356804": {
+      "d0": 1927,
+      "d1": 2019,
+      "note": "Record is for Leonid Khadzhinov; biographical source gives his lifespan as 28 April 1927–28 February 2019. https://ru.wikipedia.org/wiki/Хаджинов,_Леонид_Петрович"
+    },
+    "99512741": {
+      "d0": 1921,
+      "d1": 1941,
+      "note": "Bibliographic records identify the work as Очерки истории культуры крымскотатарского народа (1921–1941). https://search.rsl.ru/ru/record/01000615877"
+    },
+    "2001370768": {
+      "d0": 1771,
+      "d1": 1775,
+      "note": "Library catalog assigns the work to the Bucovina annexation/occupation period 1771–1775. https://bibgtkneamt.ebibliophil.ro/cauta/pag/42?prefix=mon&q=Nicolae+Iorga"
+    },
+    "2019279588": {
+      "d0": 1950,
+      "d1": 1959,
+      "note": "The full title specifies Soviet security-service operations in the Rozivskyi district during the 1950s. https://bastion.tv/polyuvannya-za-lyudinoyu-vidano-zbirnik-dokumentiv-radyanskih-specsluzhb_n34145/"
+    },
+    "2014506626": {
+      "d0": 2014,
+      "d1": 2014,
+      "note": "The book description says the chronicle covers fighting in Donbas in spring–autumn 2014. https://www.litres.ru/book/mihail-polikarpov/bitva-za-donbass-igor-strelkov-razgrom-karateley-hroniki-21378089/"
+    },
+    "56052895": {
+      "d0": 1927,
+      "d1": 1927,
+      "note": "Bibliographic sources identify this work as a 1927 publication on cultural construction in Ukraine. https://history.znu.edu.ua/index.php/journal/article/view/1703"
+    },
+    "2020482801": {
+      "d0": 1917,
+      "d1": 1945,
+      "note": "Bibliographic description of Viktor Kirkevich’s volume specifies the Kyiv history period as 1917–1945. https://www.olx.ua/d/uk/obyavlenie/v-kirkevich-istoriya-kieva-v-4-h-knigah-IDSnh4k.html"
+    },
+    "2023042224": {
+      "d0": 1929,
+      "d1": 1934,
+      "note": "Routledge title/description specifies the OUN emigration study covers 1929–1934. https://www.routledge.com/Organisation-of-Ukrainian-Nationalists-on-Emigration-Its-Formation-and/Gibiec/p/book/9781032550831"
+    },
+    "95152999": {
+      "d0": 1901,
+      "d1": 1950,
+      "note": "The Institute of History of Ukraine identifies this work as covering the first half of the 20th century. https://history.org.ua/uk/page/pro-institut"
+    },
+    "2012408751": {
+      "d0": 1920,
+      "d1": 1939,
+      "note": "The book’s described scope is the Ukrainian Greek Catholic Church and nationalist movement in Galicia during the 1920s–1930s. https://lib.in.ua/161981-reczenziia-naczionalizm-i-religiia"
+    },
+    "2003399426": {
+      "d0": 1920,
+      "d1": 1939,
+      "note": "A regional-history source identifies the work as documenting the resistance in Sumy region during the 1920s–1930s. https://history.sumy.ua/research/article/natsionalnyi-sprotyv-na-sumshchyni-dosvid-2030kh-rokiv/"
+    },
+    "2019373281": {
+      "d0": 1913,
+      "d1": 1992,
+      "note": "The Ukrainian Institute of National Memory gives Dariia Rebet’s lifespan as 1913–1992. https://uinp.gov.ua/istorychnyy-kalendar/lyutyy/26/1913-narodylasya-dariya-rebet"
+    },
+    "2011460062": {
+      "d0": 1936,
+      "d1": 1941,
+      "note": "The National Historical Library describes the Bykivnia burial victims as killed and buried there during 1936–1941. https://www.nibu.kyiv.ua/exhibitions/970/"
+    },
+    "2020524890": {
+      "d0": 1901,
+      "d1": 1925,
+      "note": "The monograph covers Ukrainian conservative circles in Galicia in the first quarter of the 20th century and concludes in the mid-1920s. https://chytomo.com/book/na-porozi-modernoho-svitu/"
+    },
+    "99216405": {
+      "d0": 1920,
+      "d1": 1949,
+      "note": "The memoir is described as covering Ukrainian Lviv in the 1920s–1940s. https://irbis-nbuv.gov.ua/E_LIB/PDF/er-0004741.pdf"
+    },
+    "2011479852": {
+      "d0": 1918,
+      "d1": 1939,
+      "note": "The book title specifies Polish land ownership in Volhynia from 1918 to 1939. https://stara-szuflada.pl/Nad-Turia-i-Stochodem-Z-dziejow-polskiej-wlasnosci-ziemskiej-na-Wolyniu-1918-1939-p14784"
+    },
+    "2015431251": {
+      "d0": 1801,
+      "d1": 1991,
+      "note": "The book traces the national idea from its emergence in the early 19th century to Ukraine’s independence in 1991; 1801 is a conventional century boundary. https://www.michaelsbund.de/product/9782875740359-les-ukrainiens-face-a-leur-passe.html"
+    },
+    "00351060": {
+      "d0": 1995,
+      "d1": 1998,
+      "note": "The book includes interviews and essays broadcast in Radio Liberty’s Kalamar program during 1995–1998. https://www.radiosvoboda.org/a/25266725.html"
+    },
+    "2011472690": {
+      "d0": 1930,
+      "d1": 1930,
+      "note": "This pamphlet documents the 1930 Polish pacification of Ukrainians in Galicia. https://www.rulit.me/books/pacifikaciya-read-240112-1.html"
+    },
+    "2023042225": {
+      "d0": 1929,
+      "d1": 1934,
+      "note": "Verified study period from publisher description: title/subtitle states Organisation of Ukrainian Nationalists on Emigration: Its Formation and Transnational Connections in 1929–1934. https://www.routledge.com/Organisation-of-Ukrainian-Nationalists-on-Emigration-Its-Formation-and/Gibiec/p/book/9781032550831"
+    },
+    "2017432680": {
+      "d0": 1920,
+      "d1": 2001,
+      "note": "Narrowed from 1901–2000 using the dissertation record/title, which specifies the 1920s through the beginning of the 21st century. 1920 and 2001 are conventional bounds for those phrases, not explicitly stated endpoint years. https://www.uacademic.info/ua/document/0509U000128"
+    },
+    "00332247": {
+      "d0": 1938,
+      "d1": 1939,
+      "note": "Catalog title is Красне поле: Про Карпатську Україну. The collection concerns the Carpathian Ukrainian state and its March 1939 struggle; the state existed in 1938–1939. https://city-library.uz.ua/vrtualn-vistavki/381-karpatska-ukrana-suchasnij-poglyad-do-80-rchchya-karpatsko-ukrani.html"
+    },
+    "2020007990": {
+      "d0": 1918,
+      "d1": 1939,
+      "note": "Oxford University Press description explicitly dates the Volhynia interwar setting 1918–1939. https://academic.oup.com/book/33499"
+    },
+    "99195622": {
+      "d0": 1991,
+      "d1": 1998,
+      "note": "The report examines Crimea’s regional autonomy in independent Ukraine, beginning with establishment of Crimean ASSR in 1991 and developments through the 1998 report. https://www.ssoar.info/ssoar/handle/document/43615"
+    },
+    "2009460191": {
+      "d0": 1921,
+      "d1": 1923,
+      "note": "The National Academy of Sciences of Ukraine Institute of History record gives the source documents’ coverage explicitly: February 1921 to February 1923. https://resource.history.org.ua/item/0014163"
+    },
+    "2016451986": {
+      "d0": 1917,
+      "d1": 1939,
+      "note": "The Institute of History of Ukraine annotation states the conference collection covers capital-status changes from the Ukrainian People’s Republic through the end of the 1930s. https://resource.history.org.ua/item/10818"
+    },
+    "84200371": {
+      "ranges": [
+        {
+          "d0": 250,
+          "d1": 350
+        },
+        {
+          "d0": 450,
+          "d1": 500
+        }
+      ],
+      "note": "Keep the archaeological horizons separate: Chernyakhiv settlement at Ostrovy, second half of the 3rd through first half of the 4th century (c. 250–350); early Slavic horizon, second half of the 5th century (c. 450–500). Location is Sokil (Sokol), Khmelnytskyi Oblast, on the Middle Dniester. Dates are approximate century subdivisions. Archaeological references: https://publications.lnu.edu.ua/bulletins/index.php/history/article/download/13688/14164 and https://www.vgosau.kiev.ua/load_period-sb/AS_05.pdf"
+    },
+    "2007372338": {
+      "ranges": [
+        {
+          "d0": 1201,
+          "d1": 1261
+        },
+        {
+          "d0": 1262,
+          "d1": 1292
+        }
+      ],
+      "note": "Chronicle chronology corrected to its two sections: Galician, 1201–1261; Volhynian, 1262–1292. Removed the broad Ukraine 862–1240 / 1240–1340 classification from this source-text edition. Sources: Encyclopedia of Ukraine, Galician-Volhynian Chronicle (https://www.encyclopediaofukraine.com/display.asp?linkpath=pages%5CG%5CA%5CGalician6VolhynianChronicle.htm); Primary Chronicle Series, 2005 edition (https://psrl.csu.ru/toms/GVL_2005.shtml)."
+    },
+    "70218766": {
+      "ranges": [
+        {
+          "d0": 1201,
+          "d1": 1261
+        },
+        {
+          "d0": 1262,
+          "d1": 1292
+        }
+      ],
+      "note": "Corrected title typo to Галицько-волинський літопис. Assigned separate geographical/date spans for the Galician section (1201–1261) and Volhynian section (1262–1292), removing broad Kievan Rus and Ukraine dates. Source: Encyclopedia of Ukraine, Galician-Volhynian Chronicle (https://www.encyclopediaofukraine.com/display.asp?linkpath=pages%5CG%5CA%5CGalician6VolhynianChronicle.htm)."
+    },
+    "2022553406": {
+      "d0": 501,
+      "d1": 2014,
+      "note": "Corrected the assigned subject-date range to the book’s actual scope: sixth century through the 2014 Maidan events (not merely Kievan Rus’). The 2018 date is publication, not the latest historical content. Sources: Russian Historical Society book presentation, 13 March 2018 (https://historyrussia.org/sobytiya/pjotr-tolochko-predstavil-svoyu-novuyu-knigu-v-moskve.html), which describes the book as covering ancient Slavs through Maidan; catalog title “История Украины VI-XXI”."
     }
-   ],
-   "note": "Keep the archaeological horizons separate: Chernyakhiv settlement at Ostrovy, second half of the 3rd through first half of the 4th century (c. 250–350); early Slavic horizon, second half of the 5th century (c. 450–500). Location is Sokil (Sokol), Khmelnytskyi Oblast, on the Middle Dniester. Dates are approximate century subdivisions. Archaeological references: https://publications.lnu.edu.ua/bulletins/index.php/history/article/download/13688/14164 and https://www.vgosau.kiev.ua/load_period-sb/AS_05.pdf"
-  }
- },
- "gaz": {}
+  },
+  "gaz": {}
 }
