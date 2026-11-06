@@ -1,0 +1,1549 @@
+{
+ "events": [
+  {
+   "id": "mongol",
+   "label": "Mongol invasion of Rus, 1237-1241",
+   "type": "war",
+   "start": 1237.9,
+   "end": 1241.9,
+   "n": 1,
+   "place": null,
+   "state": "several (2): see the Timeline",
+   "summary": "1237-11: (no state in the gazetteer) 36% / Kingdom of Galicia-Volhynia 24% → 1240: Golden Horde (Ukrainian steppe) 53% / Kingdom of Galicia-Volhynia 24%",
+   "parties": "Mongols vs Kyivan Rus and Galicia-Volhynia (Kyiv fell in 1240)",
+   "confidence": "Medium"
+  },
+  {
+   "id": "blue_waters",
+   "label": "Battle of Blue Waters, 1363",
+   "type": "battle",
+   "start": 1363.0,
+   "end": 1363.0,
+   "n": 4,
+   "place": {
+    "name": "Syniukha river",
+    "lat": 48.05,
+    "lon": 30.85
+   },
+   "state": "Golden Horde (Ukrainian steppe)",
+   "summary": "1363: Golden Horde (Ukrainian steppe) 100%",
+   "parties": "Grand Duchy of Lithuania vs the Golden Horde",
+   "confidence": "High"
+  },
+  {
+   "id": "kulikovo",
+   "label": "Battle of Kulikovo, 1380",
+   "type": "battle",
+   "start": 1380.7,
+   "end": 1380.7,
+   "n": 1,
+   "place": {
+    "name": "Kulikovo field",
+    "lat": 53.67,
+    "lon": 38.65
+   },
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Muscovy and allies vs the Golden Horde",
+   "confidence": "Low"
+  },
+  {
+   "id": "horodlo",
+   "label": "Union of Horodło, 1413",
+   "type": "treaty",
+   "start": 1413.75,
+   "end": 1413.75,
+   "n": 1,
+   "place": {
+    "name": "Horodło",
+    "lat": 50.82,
+    "lon": 23.9
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Poland and the Grand Duchy of Lithuania",
+   "confidence": "Low"
+  },
+  {
+   "id": "livonian",
+   "label": "Livonian War, 1557-1582",
+   "type": "war",
+   "start": 1557.5,
+   "end": 1582.1,
+   "n": 1,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Muscovy vs Livonia, Lithuania-Poland, Sweden",
+   "confidence": "Medium"
+  },
+  {
+   "id": "lublin",
+   "label": "Union of Lublin, 1569",
+   "type": "treaty",
+   "start": 1569.5,
+   "end": 1569.5,
+   "n": 1,
+   "place": {
+    "name": "Lublin",
+    "lat": 51.25,
+    "lon": 22.57
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Poland and Lithuania (Volhynia, Bratslav and Kyiv to the Polish Crown)",
+   "confidence": "Low"
+  },
+  {
+   "id": "rp1609",
+   "label": "Polish-Muscovite War, 1609-1618",
+   "type": "war",
+   "start": 1609.8,
+   "end": 1618.9,
+   "n": 1,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Commonwealth vs Muscovy",
+   "confidence": "Low"
+  },
+  {
+   "id": "chocim",
+   "label": "Battle of Khotyn (Chocim), 1621",
+   "type": "battle",
+   "start": 1621.7,
+   "end": 1621.8,
+   "n": 2,
+   "place": {
+    "name": "Khotyn",
+    "lat": 48.51,
+    "lon": 26.49
+   },
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1621-09: Polish-Lithuanian Commonwealth (Ukrainian lands) 100%",
+   "parties": "Commonwealth and Zaporozhian Cossacks vs the Ottoman Empire",
+   "confidence": "High"
+  },
+  {
+   "id": "poltava_regiment",
+   "label": "Poltava Regiment of the Cossack Hetmanate (regimental officers), 1648-1775",
+   "type": "institution",
+   "start": 1648.0,
+   "end": 1775.6,
+   "n": 3,
+   "place": {
+    "name": "Poltava",
+    "lat": 49.5883,
+    "lon": 34.5514
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1648: Cossack Hetmanate and Zaporozhian Sich 100% → 1764: Little Russia Governorate 100%",
+   "parties": "Cossack Hetmanate (Poltava regiment and its officers, the starshyna)",
+   "confidence": "High"
+  },
+  {
+   "id": "cossack_polish",
+   "label": "Khmelnytsky Uprising / Cossack-Polish War, 1648-1657",
+   "type": "war",
+   "start": 1648.1,
+   "end": 1657.6,
+   "n": 35,
+   "place": null,
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1648-02: Polish-Lithuanian Commonwealth (Ukrainian lands) 62% / Cossack Hetmanate and Zaporozhian Sich 38%",
+   "parties": "Zaporozhian Host (Hetmanate) and Crimean Khanate vs the Polish-Lithuanian Commonwealth; from 1654 with Russia",
+   "confidence": "Medium"
+  },
+  {
+   "id": "zhovti",
+   "label": "Battle of Zhovti Vody, 1648",
+   "type": "battle",
+   "start": 1648.35,
+   "end": 1648.35,
+   "n": 3,
+   "place": {
+    "name": "Zhovti Vody",
+    "lat": 48.35,
+    "lon": 33.5
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1648-05: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Zaporozhian Host and Crimean Khanate vs the Commonwealth",
+   "confidence": "High"
+  },
+  {
+   "id": "korsun",
+   "label": "Battle of Korsun, 1648",
+   "type": "battle",
+   "start": 1648.37,
+   "end": 1648.37,
+   "n": 2,
+   "place": {
+    "name": "Korsun",
+    "lat": 49.42,
+    "lon": 31.26
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1648-05: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Zaporozhian Host vs the Commonwealth",
+   "confidence": "High"
+  },
+  {
+   "id": "zbarazh",
+   "label": "Siege of Zbarazh, 1649",
+   "type": "siege",
+   "start": 1649.5,
+   "end": 1649.6,
+   "n": 2,
+   "place": {
+    "name": "Zbarazh",
+    "lat": 49.66,
+    "lon": 25.78
+   },
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1649-07: Polish-Lithuanian Commonwealth (Ukrainian lands) 100%",
+   "parties": "Cossacks and Tatars vs the Commonwealth",
+   "confidence": "Low"
+  },
+  {
+   "id": "zboriv",
+   "label": "Battle of Zboriv, 1649 (Treaty of Zboriv)",
+   "type": "battle",
+   "start": 1649.6,
+   "end": 1649.6,
+   "n": 3,
+   "place": {
+    "name": "Zboriv",
+    "lat": 49.66,
+    "lon": 25.15
+   },
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1649-08: Polish-Lithuanian Commonwealth (Ukrainian lands) 100%",
+   "parties": "Zaporozhian Host and Crimean Khanate vs the Commonwealth",
+   "confidence": "High"
+  },
+  {
+   "id": "beresteczko",
+   "label": "Battle of Berestechko, 1651",
+   "type": "battle",
+   "start": 1651.49,
+   "end": 1651.49,
+   "n": 9,
+   "place": {
+    "name": "Berestechko",
+    "lat": 50.36,
+    "lon": 25.1
+   },
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1651-06: Polish-Lithuanian Commonwealth (Ukrainian lands) 100%",
+   "parties": "Commonwealth vs the Cossacks and Crimean Khanate",
+   "confidence": "High"
+  },
+  {
+   "id": "batih",
+   "label": "Battle of Batih, 1652",
+   "type": "battle",
+   "start": 1652.4,
+   "end": 1652.4,
+   "n": 2,
+   "place": {
+    "name": "Batih",
+    "lat": 48.9,
+    "lon": 27.35
+   },
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1652-05: Polish-Lithuanian Commonwealth (Ukrainian lands) 100%",
+   "parties": "Zaporozhian Host vs the Commonwealth",
+   "confidence": "High"
+  },
+  {
+   "id": "pereyaslav",
+   "label": "Pereiaslav agreement, 1654",
+   "type": "treaty",
+   "start": 1654.05,
+   "end": 1654.05,
+   "n": 29,
+   "place": {
+    "name": "Pereiaslav",
+    "lat": 50.0667,
+    "lon": 31.45
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1654-01: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Zaporozhian Host (Hetmanate) and the Tsardom of Russia",
+   "confidence": "High"
+  },
+  {
+   "id": "rp1658",
+   "label": "Russo-Polish War, 1654-1667 (Thirteen Years' War)",
+   "type": "war",
+   "start": 1654.1,
+   "end": 1667.1,
+   "n": 2,
+   "place": null,
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1654-02: Cossack Hetmanate and Zaporozhian Sich 62% / Polish-Lithuanian Commonwealth (Ukrainian lands) 25%",
+   "parties": "Russia and (until 1658) the Hetmanate vs the Commonwealth",
+   "confidence": "Low"
+  },
+  {
+   "id": "hadiach",
+   "label": "Treaty of Hadiach, 1658",
+   "type": "treaty",
+   "start": 1658.7,
+   "end": 1658.7,
+   "n": 2,
+   "place": {
+    "name": "Hadiach",
+    "lat": 50.37,
+    "lon": 34.0
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1658-09: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Hetmanate (Vyhovsky) and the Commonwealth",
+   "confidence": "High"
+  },
+  {
+   "id": "konotop",
+   "label": "Battle of Konotop, 1659",
+   "type": "battle",
+   "start": 1659.5,
+   "end": 1659.5,
+   "n": 10,
+   "place": {
+    "name": "Konotop",
+    "lat": 51.24,
+    "lon": 33.2
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1659-07: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Hetmanate (Vyhovsky) and Crimean Khanate vs Russia",
+   "confidence": "High"
+  },
+  {
+   "id": "chudniv",
+   "label": "Battle of Chudniv (Cudnów), 1660",
+   "type": "battle",
+   "start": 1660.8,
+   "end": 1660.9,
+   "n": 1,
+   "place": {
+    "name": "Chudniv",
+    "lat": 50.05,
+    "lon": 28.08
+   },
+   "state": "Polish-Lithuanian Commonwealth (Ukrainian lands)",
+   "summary": "1660-10: Polish-Lithuanian Commonwealth (Ukrainian lands) 100%",
+   "parties": "Commonwealth and Crimean Khanate vs Russia and Hetmanate (Khmelnytsky)",
+   "confidence": "High"
+  },
+  {
+   "id": "andrusovo",
+   "label": "Treaty of Andrusovo, 1667 (9 February)",
+   "type": "treaty",
+   "start": 1667.1,
+   "end": 1667.1,
+   "n": 3,
+   "place": {
+    "name": "Andrusovo",
+    "lat": 54.7,
+    "lon": 31.5
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Commonwealth and Tsardom of Russia (partition along the Dnipro)",
+   "confidence": "Low"
+  },
+  {
+   "id": "northern",
+   "label": "Great Northern War, 1700-1721",
+   "type": "war",
+   "start": 1700.1,
+   "end": 1721.7,
+   "n": 14,
+   "place": null,
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1700-02: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Russia (Tsardom/Empire) vs Sweden; Hetman Mazepa joined Sweden in 1708",
+   "confidence": "Medium"
+  },
+  {
+   "id": "baturyn",
+   "label": "Baturyn massacre, 1708",
+   "type": "massacre",
+   "start": 1708.85,
+   "end": 1708.85,
+   "n": 3,
+   "place": {
+    "name": "Baturyn",
+    "lat": 51.34,
+    "lon": 32.88
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1708-11: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Russian army vs the Hetman's capital (Mazepa)",
+   "confidence": "High"
+  },
+  {
+   "id": "poltava",
+   "label": "Battle of Poltava, 1709",
+   "type": "battle",
+   "start": 1709.5,
+   "end": 1709.5,
+   "n": 5,
+   "place": {
+    "name": "Poltava",
+    "lat": 49.59,
+    "lon": 34.55
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1709-07: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Russia vs Sweden and Mazepa's Cossacks",
+   "confidence": "High"
+  },
+  {
+   "id": "rt1736",
+   "label": "Russo-Turkish War, 1735-1739",
+   "type": "war",
+   "start": 1735.7,
+   "end": 1739.7,
+   "n": 1,
+   "place": null,
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1735-09: Cossack Hetmanate and Zaporozhian Sich 62% / Polish-Lithuanian Commonwealth (Ukrainian lands) 26%",
+   "parties": "Russia vs the Ottoman Empire and the Crimean Khanate",
+   "confidence": "Low",
+   "area_note": "Outlines of the campaigns on the territory of Ukraine, by year (approximate): 1736 Azov and the lower Don, Perekop and Crimea; 1737 Ochakiv and the Dnieper-Bug estuary, Crimea again; 1739 Khotyn and the Dniester",
+   "areas": [
+    {
+     "k": "1736a",
+     "start": 1736.0,
+     "end": 1737.0,
+     "label": "1736: Azov and the lower Don",
+     "poly": [
+      [
+       47.6,
+       38.4
+      ],
+      [
+       47.7,
+       39.9
+      ],
+      [
+       47.0,
+       40.0
+      ],
+      [
+       46.6,
+       38.9
+      ],
+      [
+       46.9,
+       37.9
+      ]
+     ]
+    },
+    {
+     "k": "1736b",
+     "start": 1736.0,
+     "end": 1737.0,
+     "label": "1736: Perekop and Crimea",
+     "poly": [
+      [
+       46.5,
+       33.0
+      ],
+      [
+       46.2,
+       34.2
+      ],
+      [
+       45.3,
+       36.5
+      ],
+      [
+       44.5,
+       34.4
+      ],
+      [
+       44.6,
+       33.0
+      ],
+      [
+       45.3,
+       32.5
+      ]
+     ]
+    },
+    {
+     "k": "1737a",
+     "start": 1737.0,
+     "end": 1738.0,
+     "label": "1737: Ochakiv and the Dnieper-Bug estuary",
+     "poly": [
+      [
+       47.2,
+       30.8
+      ],
+      [
+       47.2,
+       32.5
+      ],
+      [
+       46.6,
+       32.8
+      ],
+      [
+       46.4,
+       31.6
+      ],
+      [
+       46.6,
+       30.8
+      ]
+     ]
+    },
+    {
+     "k": "1737b",
+     "start": 1737.0,
+     "end": 1738.0,
+     "label": "1737: Crimea again",
+     "poly": [
+      [
+       46.5,
+       33.0
+      ],
+      [
+       46.2,
+       34.2
+      ],
+      [
+       45.3,
+       36.5
+      ],
+      [
+       44.5,
+       34.4
+      ],
+      [
+       44.6,
+       33.0
+      ],
+      [
+       45.3,
+       32.5
+      ]
+     ]
+    },
+    {
+     "k": "1739",
+     "start": 1739.0,
+     "end": 1739.7,
+     "label": "1739: Khotyn and the Dniester",
+     "poly": [
+      [
+       48.9,
+       25.8
+      ],
+      [
+       48.9,
+       27.3
+      ],
+      [
+       48.4,
+       27.6
+      ],
+      [
+       48.1,
+       26.9
+      ],
+      [
+       48.2,
+       26.0
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "uprising1768",
+   "label": "Koliivshchyna (Haidamak uprising), 1768",
+   "type": "uprising",
+   "start": 1768.4,
+   "end": 1768.6,
+   "n": 14,
+   "place": {
+    "name": "Uman",
+    "lat": 48.75,
+    "lon": 30.22
+   },
+   "state": "Cossack Hetmanate and Zaporozhian Sich",
+   "summary": "1768-05: Cossack Hetmanate and Zaporozhian Sich 100%",
+   "parties": "Haidamaks and Zaporozhian Cossacks vs Polish nobles and Jews (Right Bank); Russian troops",
+   "confidence": "Low"
+  },
+  {
+   "id": "rt1768",
+   "label": "Russo-Turkish War, 1768-1774",
+   "type": "war",
+   "start": 1768.8,
+   "end": 1774.5,
+   "n": 1,
+   "place": null,
+   "state": "several (2): see the Timeline",
+   "summary": "1768-10: Polish-Lithuanian Commonwealth (Ukrainian lands) 26% / Cossack Hetmanate and Zaporozhian Sich 23% → 1772: Cossack Hetmanate and Zaporozhian Sich 23% / Little Russia Governorate 22%",
+   "parties": "Russia vs the Ottoman Empire and the Crimean Khanate",
+   "confidence": "Medium",
+   "areas": [
+    {
+     "k": "1769a",
+     "start": 1768.8,
+     "end": 1770.0,
+     "label": "1769: Khotyn and the Dniester",
+     "poly": [
+      [
+       48.9,
+       25.8
+      ],
+      [
+       48.9,
+       27.3
+      ],
+      [
+       48.4,
+       27.6
+      ],
+      [
+       48.1,
+       26.9
+      ],
+      [
+       48.2,
+       26.0
+      ]
+     ]
+    },
+    {
+     "k": "1769b",
+     "start": 1768.8,
+     "end": 1770.0,
+     "label": "1769: the Tatar raid on New Serbia",
+     "poly": [
+      [
+       49.0,
+       31.0
+      ],
+      [
+       49.0,
+       33.0
+      ],
+      [
+       47.8,
+       33.2
+      ],
+      [
+       47.6,
+       31.2
+      ]
+     ]
+    },
+    {
+     "k": "1770",
+     "start": 1770.0,
+     "end": 1771.0,
+     "label": "1770: Budjak, Izmail and Bender",
+     "poly": [
+      [
+       47.0,
+       28.5
+      ],
+      [
+       47.0,
+       30.2
+      ],
+      [
+       45.2,
+       30.2
+      ],
+      [
+       45.2,
+       28.6
+      ]
+     ]
+    },
+    {
+     "k": "1771",
+     "start": 1771.0,
+     "end": 1772.0,
+     "label": "1771: Perekop and Crimea",
+     "poly": [
+      [
+       46.5,
+       33.0
+      ],
+      [
+       46.2,
+       34.2
+      ],
+      [
+       45.3,
+       36.5
+      ],
+      [
+       44.5,
+       34.4
+      ],
+      [
+       44.6,
+       33.0
+      ],
+      [
+       45.3,
+       32.5
+      ]
+     ]
+    }
+   ],
+   "area_note": "Outlines of the campaigns on the territory of Ukraine, by year (approximate): 1769 Khotyn and the Dniester, the Tatar raid on New Serbia; 1770 Budjak, Izmail and Bender; 1771 Perekop and Crimea"
+  },
+  {
+   "id": "partition",
+   "label": "Partitions of Poland-Lithuania, 1772-1795",
+   "type": "treaty",
+   "start": 1772.0,
+   "end": 1795.8,
+   "n": 1,
+   "place": null,
+   "state": "several (3): see the Timeline",
+   "summary": "1772: Cossack Hetmanate and Zaporozhian Sich 23% / Little Russia Governorate 22% → 1782: Polish-Lithuanian Commonwealth (Ukrainian lands) 30% / Little Russia Governorate 22% → 1783-04: New Russia (Novorossiya Governorate) 29% / Polish-Lithuanian Commonwealth (Ukrainian lands) 25% → 1793-09: New Russia (Novorossiya Governorate) 29% / Russian Empire (Ukrainian governorates) 27%",
+   "parties": "Russia, Austria, Prussia vs the Commonwealth",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "karasubazar",
+   "label": "Treaty of Karasubazar, 1772",
+   "type": "treaty",
+   "start": 1772.5,
+   "end": 1772.5,
+   "n": 1,
+   "place": {
+    "name": "Karasubazar",
+    "lat": 45.05,
+    "lon": 34.6
+   },
+   "state": "Crimean Khanate",
+   "summary": "1772-07: Crimean Khanate 100%",
+   "parties": "Russia and the Crimean Khanate",
+   "confidence": "High"
+  },
+  {
+   "id": "napoleon",
+   "label": "Napoleonic Wars, 1800-1815",
+   "type": "war",
+   "start": 1800.0,
+   "end": 1815.9,
+   "n": 1,
+   "place": null,
+   "state": "New Russia (Novorossiya Governorate)",
+   "summary": "1800: New Russia (Novorossiya Governorate) 29% / Russian Empire (Ukrainian governorates) 27%",
+   "parties": "Russia, Austria, Prussia vs France",
+   "confidence": "Low"
+  },
+  {
+   "id": "odesa_office",
+   "label": "Odesa Office for Foreign Settlers in Southern Russia, 1806-1850",
+   "type": "institution",
+   "start": 1806.0,
+   "end": 1851.0,
+   "n": 2,
+   "place": {
+    "name": "Odesa",
+    "lat": 46.4825,
+    "lon": 30.7233
+   },
+   "state": "Russian Empire (Ukrainian governorates)",
+   "summary": "1806: Russian Empire (Ukrainian governorates) 100%",
+   "parties": "Russian Empire (Novorossiia governorate)",
+   "confidence": "High"
+  },
+  {
+   "id": "grossliebental",
+   "label": "Grossliebental (Mariinsky) Volost, German colonies near Odesa, 1815-1920",
+   "type": "institution",
+   "start": 1815.0,
+   "end": 1921.0,
+   "n": 1,
+   "place": {
+    "name": "Grossliebental",
+    "lat": 46.3667,
+    "lon": 30.6
+   },
+   "state": "Russian Empire (Ukrainian governorates)",
+   "summary": "1815: Russian Empire (Ukrainian governorates) 100% → 1917-03: Russian Republic (Provisional Government) 100% → 1917-11: Ukrainian People's Republic (Central Rada) 100% → 1918-01: Odesa Soviet Republic 100% → 1918-04: Ukrainian People's Republic (Central Rada) 100% → 1918-04: (no state in the gazetteer) 100% → 1918-04: Ukrainian State (Second Hetmanate) 100% → 1918-12: (no state in the gazetteer) 100% → 1919: Ukrainian SSR (Soviet Ukraine) 100% → 1919-07: South Russia (Denikin) 100% → 1920-04: Ukrainian SSR (Soviet Ukraine) 100%",
+   "parties": "Russian Empire, then the Ukrainian SSR (German colonists)",
+   "confidence": "High"
+  },
+  {
+   "id": "greek1821",
+   "label": "Greek War of Independence, 1821-1829",
+   "type": "war",
+   "start": 1821.2,
+   "end": 1829.7,
+   "n": 2,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Greek rebels vs the Ottoman Empire; Filiki Eteria started in Odesa",
+   "confidence": "Low"
+  },
+  {
+   "id": "famine1845",
+   "label": "Famine of 1845-1852",
+   "type": "famine",
+   "start": 1845.0,
+   "end": 1852.9,
+   "n": 1,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "?",
+   "confidence": "Low"
+  },
+  {
+   "id": "crimean",
+   "label": "Crimean War, 1853-1856",
+   "type": "war",
+   "start": 1853.8,
+   "end": 1856.2,
+   "n": 3,
+   "place": null,
+   "state": "Russian Empire (Ukrainian governorates)",
+   "summary": "1853-10: Russian Empire (Ukrainian governorates) 34% / New Russia (Novorossiya Governorate) 29%",
+   "parties": "Russian Empire vs Ottoman Empire, Britain, France, Sardinia",
+   "confidence": "Medium",
+   "area": [
+    [
+     44.3,
+     33.6
+    ],
+    [
+     44.3,
+     34.6
+    ],
+    [
+     45.0,
+     36.5
+    ],
+    [
+     45.3,
+     37.2
+    ],
+    [
+     46.7,
+     37.1
+    ],
+    [
+     46.9,
+     35.5
+    ],
+    [
+     46.5,
+     33.8
+    ],
+    [
+     46.8,
+     32.0
+    ],
+    [
+     46.7,
+     30.4
+    ],
+    [
+     45.3,
+     29.7
+    ],
+    [
+     44.8,
+     31.5
+    ]
+   ],
+   "area_note": "Theatre of war on Ukrainian territory: Danube mouth, Odesa, Kinburn, Perekop, Azov coast, Crimea (approximate)"
+  },
+  {
+   "id": "alma",
+   "label": "Battle of the Alma, 1854",
+   "type": "battle",
+   "start": 1854.72,
+   "end": 1854.72,
+   "n": 1,
+   "place": {
+    "name": "Alma river",
+    "lat": 44.78,
+    "lon": 33.6
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Russian Empire vs Britain, France, Ottoman Empire",
+   "confidence": "Low"
+  },
+  {
+   "id": "rev1863",
+   "label": "January Uprising, 1863-1864",
+   "type": "uprising",
+   "start": 1863.0,
+   "end": 1864.6,
+   "n": 1,
+   "place": null,
+   "state": "Russian Empire (Ukrainian governorates)",
+   "summary": "1863: Russian Empire (Ukrainian governorates) 56% / New Russia (Novorossiya Governorate) 29%",
+   "parties": "Poles vs the Russian Empire (Right Bank, Volhynia)",
+   "confidence": "Low"
+  },
+  {
+   "id": "rev1905",
+   "label": "Revolution of 1905-1907",
+   "type": "revolution",
+   "start": 1905.0,
+   "end": 1907.5,
+   "n": 4,
+   "place": null,
+   "state": "Russian Empire (Ukrainian governorates)",
+   "summary": "1905: Russian Empire (Ukrainian governorates) 78% / Taurida Governorate 11%",
+   "parties": "Russian Empire (Ukrainian governorates)",
+   "confidence": "Low"
+  },
+  {
+   "id": "ww1",
+   "label": "World War I, 1914-1918",
+   "type": "war",
+   "start": 1914.58,
+   "end": 1918.87,
+   "n": 86,
+   "place": null,
+   "state": "several (3): see the Timeline",
+   "summary": "1914-07: Habsburg Galicia, Bukovina and Transcarpathia 49% / Russian Empire (Ukrainian governorates) 32% → 1917-03: Habsburg Galicia, Bukovina and Transcarpathia 49% / Russian Republic (Provisional Government) 36% → 1917-11: Habsburg Galicia, Bukovina and Transcarpathia 49% / Ukrainian People's Republic (Central Rada) 32% → 1918: Kingdom of Galicia and Lodomeria (Austria) 45% / Ukrainian People's Republic (Central Rada) 28% → 1918-04: Kingdom of Galicia and Lodomeria (Austria) 45% / (no state in the gazetteer) 36% → 1918-04: Kingdom of Galicia and Lodomeria (Austria) 45% / Ukrainian State (Second Hetmanate) 36% → 1918-11: West Ukrainian People's Republic 45% / Ukrainian State (Second Hetmanate) 36%",
+   "parties": "Russian Empire vs Austria-Hungary and Germany; then the Ukrainian states",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "revolution1917",
+   "label": "Ukrainian Revolution, 1917-1921",
+   "type": "revolution",
+   "start": 1917.17,
+   "end": 1921.9,
+   "n": 424,
+   "place": null,
+   "state": "several (8): see the Timeline",
+   "summary": "1917-03: Russian Republic (Provisional Government) 70% / Habsburg Galicia, Bukovina and Transcarpathia 24% → 1917-11: Ukrainian People's Republic (Central Rada) 59% / Habsburg Galicia, Bukovina and Transcarpathia 24% → 1918: Ukrainian People's Republic (Central Rada) 43% / Kingdom of Galicia and Lodomeria (Austria) 23% → 1918-04: (no state in the gazetteer) 70% / Kingdom of Galicia and Lodomeria (Austria) 23% → 1918-04: Ukrainian State (Second Hetmanate) 70% / Kingdom of Galicia and Lodomeria (Austria) 23% → 1918-11: Ukrainian State (Second Hetmanate) 70% / West Ukrainian People's Republic 20% → 1918-12: Ukrainian People's Republic (Directorate) 35% / (no state in the gazetteer) 27% → 1919: Ukrainian People's Republic (Directorate) 35% / Ukrainian SSR (Soviet Ukraine) 24% → 1919-02: Ukrainian SSR (Soviet Ukraine) 35% / Ukrainian People's Republic (Directorate) 24% → 1919-07: South Russia (Denikin) 70% / Ukrainian People's Republic (Directorate) 20% → 1919-11: South Russia (Denikin) 70% / Second Polish Republic (Galicia and Volhynia) 23% → 1920-04: Ukrainian SSR (Soviet Ukraine) 40% / Second Polish Republic (Galicia and Volhynia) 23%",
+   "parties": "Central Rada/UNR, Hetmanate, Directorate, ZUNR, Soviet Russia and the Ukrainian SSR, Whites, Poland",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "warsofind",
+   "label": "Wars of 1918-1921 (Ukrainian War of Independence)",
+   "type": "war",
+   "start": 1917.9,
+   "end": 1921.9,
+   "n": 11,
+   "place": null,
+   "state": "several (5): see the Timeline",
+   "summary": "1917-11: Habsburg Galicia, Bukovina and Transcarpathia 100% → 1918: Kingdom of Galicia and Lodomeria (Austria) 100% → 1918-11: West Ukrainian People's Republic 71% / Kingdom of Galicia and Lodomeria (Austria) 29% → 1918-11: West Ukrainian People's Republic 71% / (no state in the gazetteer) 29% → 1919-07: West Ukrainian People's Republic 71% / Second Polish Republic (Galicia and Volhynia) 29% → 1919-07: Ukrainian People's Republic (Directorate) 71% / Second Polish Republic (Galicia and Volhynia) 29% → 1919-11: Second Polish Republic (Galicia and Volhynia) 100%",
+   "parties": "Ukrainian states vs Soviet Russia, Whites, Poland, Romania; interventions of the Central Powers and the Entente",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "indep1918",
+   "label": "Proclamation of independence of the Ukrainian People's Republic, 1918 (22 January)",
+   "type": "declaration",
+   "start": 1918.06,
+   "end": 1918.06,
+   "n": 4,
+   "place": {
+    "name": "Kyiv",
+    "lat": 50.4547,
+    "lon": 30.5238
+   },
+   "state": "Ukrainian People's Republic (Central Rada)",
+   "summary": "1918-01: Ukrainian People's Republic (Central Rada) 100%",
+   "parties": "Ukrainian People's Republic (Central Rada), Fourth Universal",
+   "confidence": "High"
+  },
+  {
+   "id": "kruty",
+   "label": "Battle of Kruty, 1918",
+   "type": "battle",
+   "start": 1918.08,
+   "end": 1918.08,
+   "n": 9,
+   "place": {
+    "name": "Kruty",
+    "lat": 51.0,
+    "lon": 31.65
+   },
+   "state": "Ukrainian People's Republic (Central Rada)",
+   "summary": "1918-01: Ukrainian People's Republic (Central Rada) 100%",
+   "parties": "Ukrainian People's Republic vs Soviet Russia",
+   "confidence": "High"
+  },
+  {
+   "id": "brest",
+   "label": "Treaty of Brest-Litovsk with the UNR, 1918 (9 February)",
+   "type": "treaty",
+   "start": 1918.11,
+   "end": 1918.11,
+   "n": 2,
+   "place": {
+    "name": "Brest-Litovsk",
+    "lat": 52.09,
+    "lon": 23.69
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Ukrainian People's Republic and the Central Powers",
+   "confidence": "Low"
+  },
+  {
+   "id": "bukovina_union",
+   "label": "Union of Bukovina with Romania, 1918",
+   "type": "annexation",
+   "start": 1918.82,
+   "end": 1918.97,
+   "n": 5,
+   "place": {
+    "name": "Chernivtsi",
+    "lat": 48.2921,
+    "lon": 25.9358
+   },
+   "state": "several (2): see the Timeline",
+   "summary": "1918-10: Duchy of Bukovina (Austria) 100% → 1918-11: Kingdom of Romania (Bukovina, Bessarabia) 100%",
+   "parties": "General Congress of Bukovina; Kingdom of Romania",
+   "confidence": "High"
+  },
+  {
+   "id": "rp1919",
+   "label": "Polish-Soviet War, 1919-1920",
+   "type": "war",
+   "start": 1919.1,
+   "end": 1921.2,
+   "n": 2,
+   "place": null,
+   "state": "several (3): see the Timeline",
+   "summary": "1919-02: Ukrainian SSR (Soviet Ukraine) 48% / Ukrainian People's Republic (Directorate) 30% → 1919-07: South Russia (Denikin) 89% / Ukrainian People's Republic (Directorate) 5% → 1919-11: South Russia (Denikin) 89% / Second Polish Republic (Galicia and Volhynia) 6% → 1920-04: Ukrainian SSR (Soviet Ukraine) 54% / Ukrainian People's Republic (Directorate) 24% → 1920-11: Ukrainian SSR (Soviet Ukraine) 70% / Second Polish Republic (Galicia and Volhynia) 14%",
+   "parties": "Poland (with the UNR from April 1920) vs Soviet Russia and Soviet Ukraine",
+   "confidence": "Low"
+  },
+  {
+   "id": "poland1921",
+   "label": "Treaty of Riga, 1921 (18 March)",
+   "type": "treaty",
+   "start": 1921.21,
+   "end": 1921.21,
+   "n": 1,
+   "place": {
+    "name": "Riga",
+    "lat": 56.95,
+    "lon": 24.1
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Poland vs Soviet Russia and Soviet Ukraine (border at the Zbruch and Sluch)",
+   "confidence": "Low"
+  },
+  {
+   "id": "famine33",
+   "label": "Famine of 1932-1933 (Holodomor)",
+   "type": "famine",
+   "start": 1932.5,
+   "end": 1933.7,
+   "n": 504,
+   "place": null,
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1932-07: Ukrainian SSR (Soviet Ukraine) 93% / Kingdom of Romania (Bukovina, Bessarabia) 3%",
+   "parties": "Ukrainian SSR (also Kuban, Kazakhstan, Volga) under the USSR",
+   "confidence": "Medium"
+  },
+  {
+   "id": "holodomor_after",
+   "label": "Holodomor: memory, denial, survivors",
+   "type": "memory",
+   "start": 1933.7,
+   "end": 2027.0,
+   "n": 10,
+   "place": null,
+   "state": "several (4): see the Timeline",
+   "summary": "1933-09: Ukrainian SSR (Soviet Ukraine) 75% / Second Polish Republic (Galicia and Volhynia) 14% → 1939-09: Ukrainian SSR (Soviet Ukraine) 89% / Crimean ASSR 5% → 1941-08: Reichskommissariat Ukraine 76% / Transnistria Governorate 10% → 1944-03: Reichskommissariat Ukraine 76% / Ukrainian SSR (Soviet Ukraine) 10% → 1944-04: Ukrainian SSR (Soviet Ukraine) 88% / Crimean ASSR 5% → 1945-04: Ukrainian SSR (Soviet Ukraine) 92% / Crimean Oblast (RSFSR) 5% → 1954-03: Ukrainian SSR (Soviet Ukraine) 100% → 1991-08: Ukraine (independent) 95% / Autonomous Republic of Crimea 5% → 2014-03: Ukraine (independent) 95% / Russian-occupied Crimea 5% → 2014-04: Ukraine (independent) 89% / Donetsk and Luhansk People's Republics 6%",
+   "parties": "(not an event of its own: derivative headings)",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "purges",
+   "label": "Great Terror, 1937-1938",
+   "type": "purge",
+   "start": 1937.0,
+   "end": 1939.0,
+   "n": 70,
+   "place": null,
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1937: Ukrainian SSR (Soviet Ukraine) 82% / Crimean ASSR 6%",
+   "parties": "USSR (Ukrainian SSR)",
+   "confidence": "Low"
+  },
+  {
+   "id": "vinnytsia",
+   "label": "Vinnytsia massacre (Great Terror), 1937-1938",
+   "type": "massacre",
+   "start": 1937.5,
+   "end": 1938.9,
+   "n": 8,
+   "place": {
+    "name": "Vinnytsia",
+    "lat": 49.2331,
+    "lon": 28.4682
+   },
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1937-07: Ukrainian SSR (Soviet Ukraine) 100%",
+   "parties": "NKVD (Ukrainian SSR in the USSR)",
+   "confidence": "High"
+  },
+  {
+   "id": "assassination_konovalets",
+   "label": "Assassination of Yevhen Konovalets, Rotterdam, 1938",
+   "type": "assassination",
+   "start": 1938.4,
+   "end": 1938.4,
+   "n": 3,
+   "place": {
+    "name": "Rotterdam",
+    "lat": 51.92,
+    "lon": 4.48
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Soviet agent (Sudoplatov); leader of the OUN",
+   "confidence": "Low"
+  },
+  {
+   "id": "ww2",
+   "label": "World War II, 1939-1945",
+   "type": "war",
+   "start": 1939.67,
+   "end": 1945.4,
+   "n": 355,
+   "place": null,
+   "state": "several (4): see the Timeline",
+   "summary": "1939-09: Second Polish Republic (Galicia and Volhynia) 59% / Ukrainian SSR (Soviet Ukraine) 24% → 1939-09: Ukrainian SSR (Soviet Ukraine) 83% / Crimean ASSR 9% → 1941-07: Ukrainian SSR (Soviet Ukraine) 51% / Ukrainian State (30 June 1941) 32% → 1941-08: Reichskommissariat Ukraine 47% / District Galicia (General Government) 32% → 1944-04: Ukrainian SSR (Soviet Ukraine) 56% / District Galicia (General Government) 32% → 1944-08: Ukrainian SSR (Soviet Ukraine) 88% / Crimean ASSR 9% → 1945-04: Ukrainian SSR (Soviet Ukraine) 88% / Crimean Oblast (RSFSR) 9%",
+   "parties": "USSR, Germany, Romania, Hungary, Poland (1939), Allies; OUN/UPA",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "soviet_occ39",
+   "label": "Soviet occupation of Western Ukraine, 1939-1941",
+   "type": "occupation",
+   "start": 1939.7,
+   "end": 1941.5,
+   "n": 38,
+   "place": null,
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1939-09: Ukrainian SSR (Soviet Ukraine) 82% / Kingdom of Hungary (1939-1944, Transcarpathia) 11%",
+   "parties": "USSR (the Ukrainian SSR) after invading eastern Poland",
+   "confidence": "Low"
+  },
+  {
+   "id": "western_annex",
+   "label": "Soviet annexation of Western Ukraine, 1939",
+   "type": "annexation",
+   "start": 1939.72,
+   "end": 1939.85,
+   "n": 6,
+   "place": {
+    "name": "Lviv",
+    "lat": 49.8397,
+    "lon": 24.0297
+   },
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1939-09: Ukrainian SSR (Soviet Ukraine) 100%",
+   "parties": "USSR (Red Army); Second Polish Republic; People's Assembly of Western Ukraine",
+   "confidence": "High"
+  },
+  {
+   "id": "demianiv",
+   "label": "Dem'ianiv Laz massacre, 1939-1941",
+   "type": "massacre",
+   "start": 1939.8,
+   "end": 1941.5,
+   "n": 2,
+   "place": {
+    "name": "Dem'ianiv Laz",
+    "lat": 48.9,
+    "lon": 24.75
+   },
+   "state": "Kingdom of Hungary (1939-1944, Transcarpathia)",
+   "summary": "1939-10: Kingdom of Hungary (1939-1944, Transcarpathia) 100%",
+   "parties": "NKVD (Ukrainian SSR in the USSR, after the Soviet invasion of eastern Poland)",
+   "confidence": "High"
+  },
+  {
+   "id": "winter",
+   "label": "Winter War, 1939-1940",
+   "type": "war",
+   "start": 1939.9,
+   "end": 1940.2,
+   "n": 1,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "USSR vs Finland",
+   "confidence": "Low"
+  },
+  {
+   "id": "bukovyna_kurin41",
+   "label": "Bukovynian Battalion (Bukovynskyi kurin) of 1941",
+   "type": "institution",
+   "start": 1941.5,
+   "end": 1941.9,
+   "n": 2,
+   "place": {
+    "name": "Chernivtsi",
+    "lat": 48.2921,
+    "lon": 25.9358
+   },
+   "state": "Kingdom of Romania (Bukovina, Bessarabia)",
+   "summary": "1941-07: Kingdom of Romania (Bukovina, Bessarabia) 100%",
+   "parties": "OUN (Melnyk faction); commander Petro Voinovsky; about 1,000 volunteers from Bukovyna, later joined by men from Galicia; German army area",
+   "confidence": "Low"
+  },
+  {
+   "id": "german_occ",
+   "label": "German occupation, 1941-1944",
+   "type": "occupation",
+   "start": 1941.5,
+   "end": 1944.8,
+   "n": 78,
+   "place": null,
+   "state": "several (3): see the Timeline",
+   "summary": "1941-07: Ukrainian SSR (Soviet Ukraine) 75% / Ukrainian State (30 June 1941) 25% → 1941-08: Reichskommissariat Ukraine 66% / District Galicia (General Government) 25% → 1944-04: Ukrainian SSR (Soviet Ukraine) 75% / District Galicia (General Government) 25% → 1944-08: Ukrainian SSR (Soviet Ukraine) 100%",
+   "parties": "Germany (Reichskommissariat Ukraine, District Galicia), Romania (Transnistria), Hungary (Transcarpathia)",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "indep1941",
+   "label": "Act of 30 June 1941 (Ukrainian State proclaimed in Lviv)",
+   "type": "declaration",
+   "start": 1941.5,
+   "end": 1941.5,
+   "n": 6,
+   "place": {
+    "name": "Lviv",
+    "lat": 49.8397,
+    "lon": 24.0297
+   },
+   "state": "Ukrainian State (30 June 1941)",
+   "summary": "1941-07: Ukrainian State (30 June 1941) 100%",
+   "parties": "OUN-B under German occupation; suppressed by Germany",
+   "confidence": "High"
+  },
+  {
+   "id": "transnistria",
+   "label": "Transnistria (German and Romanian occupation), 1941-1944",
+   "type": "occupation",
+   "start": 1941.6,
+   "end": 1944.2,
+   "n": 17,
+   "place": {
+    "name": "Odesa",
+    "lat": 46.48,
+    "lon": 30.73
+   },
+   "state": "Transnistria Governorate",
+   "summary": "1941-08: Transnistria Governorate 100%",
+   "parties": "Romania (with German oversight)",
+   "confidence": "High"
+  },
+  {
+   "id": "volhynia",
+   "label": "Volhynia massacres, 1943-1945",
+   "type": "massacre",
+   "start": 1943.2,
+   "end": 1945.5,
+   "n": 28,
+   "place": {
+    "name": "Volhynia",
+    "lat": 50.75,
+    "lon": 25.32
+   },
+   "state": "several (2): see the Timeline",
+   "summary": "1943-03: Reichskommissariat Ukraine 100% → 1944-04: Ukrainian SSR (Soviet Ukraine) 100%",
+   "parties": "UPA vs Polish civilians; Germans; later Soviet",
+   "confidence": "High"
+  },
+  {
+   "id": "deport_tatars",
+   "label": "Deportation of the Crimean Tatars, 1944",
+   "type": "deportation",
+   "start": 1944.4,
+   "end": 1944.4,
+   "n": 16,
+   "place": {
+    "name": "Simferopol",
+    "lat": 44.95,
+    "lon": 34.1
+   },
+   "state": "Crimean ASSR",
+   "summary": "1944-05: Crimean ASSR 100%",
+   "parties": "USSR (Crimean ASSR in the RSFSR)",
+   "confidence": "High"
+  },
+  {
+   "id": "transcarp_annex",
+   "label": "Annexation of Transcarpathia to Ukraine (Soviet Ukraine), 1944-1946",
+   "type": "annexation",
+   "start": 1944.9,
+   "end": 1946.1,
+   "n": 6,
+   "place": {
+    "name": "Uzhhorod",
+    "lat": 48.6208,
+    "lon": 22.2879
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "Soviet Ukraine; Czechoslovakia (treaty of 29 Jun 1945); People's Council of Transcarpathian Ukraine",
+   "confidence": "Low"
+  },
+  {
+   "id": "coldwar",
+   "label": "Cold War, 1947-1991",
+   "type": "war",
+   "start": 1947.0,
+   "end": 1991.9,
+   "n": 5,
+   "place": null,
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1947: Ukrainian SSR (Soviet Ukraine) 95% / Crimean Oblast (RSFSR) 5% → 1954-03: Ukrainian SSR (Soviet Ukraine) 100% → 1991-08: Ukraine (independent) 95% / Autonomous Republic of Crimea 5%",
+   "parties": "USSR (including Soviet Ukraine) vs the West",
+   "confidence": "Medium"
+  },
+  {
+   "id": "rev1956",
+   "label": "Hungarian Revolution, 1956",
+   "type": "revolution",
+   "start": 1956.8,
+   "end": 1956.9,
+   "n": 1,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Hungary vs the USSR",
+   "confidence": "Low"
+  },
+  {
+   "id": "assassination_bandera",
+   "label": "Assassination of Stepan Bandera, Munich, 1959",
+   "type": "assassination",
+   "start": 1959.8,
+   "end": 1959.8,
+   "n": 4,
+   "place": {
+    "name": "Munich",
+    "lat": 48.14,
+    "lon": 11.58
+   },
+   "state": "(place outside the grid)",
+   "summary": "",
+   "parties": "KGB agent Stashynsky; OUN-B leader",
+   "confidence": "Low"
+  },
+  {
+   "id": "soviet_afghan",
+   "label": "Soviet-Afghan War, 1979-1989",
+   "type": "war",
+   "start": 1979.98,
+   "end": 1989.1,
+   "n": 1,
+   "place": null,
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "USSR vs Afghan mujahideen",
+   "confidence": "Low"
+  },
+  {
+   "id": "chernobyl",
+   "label": "Chornobyl nuclear accident, 1986",
+   "type": "disaster",
+   "start": 1986.32,
+   "end": 1986.32,
+   "n": 14,
+   "place": {
+    "name": "Chornobyl",
+    "lat": 51.39,
+    "lon": 30.1
+   },
+   "state": "Ukrainian SSR (Soviet Ukraine)",
+   "summary": "1986-04: Ukrainian SSR (Soviet Ukraine) 100%",
+   "parties": "Ukrainian SSR within the USSR",
+   "confidence": "High"
+  },
+  {
+   "id": "coup91",
+   "label": "August coup attempt, 1991",
+   "type": "coup",
+   "start": 1991.63,
+   "end": 1991.65,
+   "n": 1,
+   "place": {
+    "name": "Moscow",
+    "lat": 55.75,
+    "lon": 37.62
+   },
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Hardliners in the USSR; led to the Ukrainian declaration of independence",
+   "confidence": "Low"
+  },
+  {
+   "id": "indep1991",
+   "label": "Declaration of independence of Ukraine, 1991 (24 August)",
+   "type": "declaration",
+   "start": 1991.65,
+   "end": 1991.65,
+   "n": 9,
+   "place": {
+    "name": "Kyiv",
+    "lat": 50.4547,
+    "lon": 30.5238
+   },
+   "state": "Ukraine (independent)",
+   "summary": "1991-08: Ukraine (independent) 100%",
+   "parties": "Ukrainian SSR becoming Ukraine",
+   "confidence": "High"
+  },
+  {
+   "id": "orange",
+   "label": "Orange Revolution, 2004",
+   "type": "revolution",
+   "start": 2004.85,
+   "end": 2005.05,
+   "n": 63,
+   "place": {
+    "name": "Kyiv",
+    "lat": 50.4547,
+    "lon": 30.5238
+   },
+   "state": "Ukraine (independent)",
+   "summary": "2004-11: Ukraine (independent) 100%",
+   "parties": "Ukraine",
+   "confidence": "High"
+  },
+  {
+   "id": "smolensk",
+   "label": "Smolensk air disaster, 2010",
+   "type": "disaster",
+   "start": 2010.28,
+   "end": 2010.28,
+   "n": 2,
+   "place": {
+    "name": "Smolensk",
+    "lat": 54.78,
+    "lon": 32.04
+   },
+   "state": "(event outside Ukraine)",
+   "summary": "",
+   "parties": "Poland and Russia",
+   "confidence": "Low"
+  },
+  {
+   "id": "dignity",
+   "label": "Euromaidan / Revolution of Dignity, 2013-2014",
+   "type": "revolution",
+   "start": 2013.9,
+   "end": 2014.15,
+   "n": 189,
+   "place": {
+    "name": "Kyiv",
+    "lat": 50.4547,
+    "lon": 30.5238
+   },
+   "state": "Ukraine (independent)",
+   "summary": "2013-11: Ukraine (independent) 100%",
+   "parties": "Protesters vs the Yanukovych government (Ukraine)",
+   "confidence": "High"
+  },
+  {
+   "id": "russo_ukr_war",
+   "label": "Russo-Ukrainian War, 2014-",
+   "type": "war",
+   "start": 2014.15,
+   "end": 2027.0,
+   "n": 602,
+   "place": null,
+   "state": "several (2): see the Timeline",
+   "summary": "2014-02: Autonomous Republic of Crimea 54% / Ukraine (independent) 46% → 2014-03: Russian-occupied Crimea 54% / Ukraine (independent) 46% → 2014-04: Russian-occupied Crimea 54% / Donetsk and Luhansk People's Republics 34%",
+   "parties": "Ukraine vs Russia and Russian-backed forces (the 'Donetsk and Luhansk People's Republics')",
+   "confidence": "Medium (several states)"
+  },
+  {
+   "id": "donetsk_airport",
+   "label": "Second Battle of Donetsk Airport, 2014-2015",
+   "type": "battle",
+   "start": 2014.4,
+   "end": 2015.1,
+   "n": 2,
+   "place": {
+    "name": "Donetsk airport",
+    "lat": 48.07,
+    "lon": 37.74
+   },
+   "state": "Donetsk and Luhansk People's Republics",
+   "summary": "2014-05: Donetsk and Luhansk People's Republics 100%",
+   "parties": "Ukraine vs Russian-backed forces",
+   "confidence": "High"
+  },
+  {
+   "id": "mh17",
+   "label": "Malaysia Airlines Flight 17 shot down, 17 July 2014",
+   "type": "disaster",
+   "start": 2014.54,
+   "end": 2014.54,
+   "n": 8,
+   "place": {
+    "name": "Hrabove (MH17)",
+    "lat": 48.1295,
+    "lon": 38.5287
+   },
+   "state": "Donetsk and Luhansk People's Republics",
+   "summary": "2014-07: Donetsk and Luhansk People's Republics 100%",
+   "parties": "Russian-backed forces in the Donbas (Buk missile); Ukraine; Netherlands and Malaysia as victims' states",
+   "confidence": "High"
+  },
+  {
+   "id": "ilovaisk",
+   "label": "Battle of Ilovaisk, 2014",
+   "type": "battle",
+   "start": 2014.65,
+   "end": 2014.67,
+   "n": 3,
+   "place": {
+    "name": "Ilovaisk",
+    "lat": 47.93,
+    "lon": 38.2
+   },
+   "state": "Donetsk and Luhansk People's Republics",
+   "summary": "2014-08: Donetsk and Luhansk People's Republics 100%",
+   "parties": "Ukraine vs Russian-backed forces and Russia",
+   "confidence": "High"
+  },
+  {
+   "id": "invasion2022",
+   "label": "Russian invasion of Ukraine, 2022-",
+   "type": "war",
+   "start": 2022.15,
+   "end": 2027.0,
+   "n": 106,
+   "place": null,
+   "state": "several (2): see the Timeline",
+   "summary": "2022-02: Ukraine (independent) 100% → 2022-03: Donetsk and Luhansk People's Republics 80% / Ukraine (independent) 20%",
+   "parties": "Ukraine vs Russia",
+   "confidence": "Medium"
+  }
+ ]
+}
