@@ -259,6 +259,26 @@
    "d0": 1969,
    "d1": 1979,
    "note": "Estimated Rule 7: other headings, the 10 years up to the cataloguing year (LCCN 79); southern Ukraine. Dates are estimates, to be checked."
+  },
+  "00417171": {
+   "d0": 1902,
+   "d1": 1914,
+   "note": "Hrushevsky lived in his Lviv villa from 1902 to 1914 (author's statement); the book on the villa belongs to those years, in Lviv (Habsburg Galicia)."
+  },
+  "2005356815": {
+   "d0": 1800,
+   "d1": 1917,
+   "note": "Title: XIX–beginning of the 20th century. The book covers the whole Volhynia Governorate of the Russian Empire, mainly 1800–1917 (settlement, the migration wave from the 1860s, the deportations of 1915–16). Author's description."
+  },
+  "2006379552": {
+   "d0": 1921,
+   "d1": 1939,
+   "note": "Title: Polish intelligentsia in Volhynia in the interwar period. The book covers western Volhynia (the Volhynian Voivodeship) from the Treaty of Riga, 1921, to September 1939. Author's description."
+  },
+  "2018361993": {
+   "d0": 1939,
+   "d1": 1941,
+   "note": "Full title: Za Khrysta i Ukrainu: kartyna z natsionalnoi martyrolohii sela Malnova, Zakhidnia Ukraina, v rr. 1939-1941. The catalogue title field kept only the part before the colon, so the years were lost. Author's note."
   }
  },
  "gaz": {}
