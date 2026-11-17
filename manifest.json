@@ -1,6 +1,8 @@
 {
-  "short_name": "DK508 Ukraine",
-  "name": "DK508 — Mapping Ukraine's History Through a Library Catalog",
+  "short_name": "VICOLEX",
+  "name": "VICOLEX: Mapping Ukraine's History Through a Library Catalog",
+  "description": "Morphing historical maps of Ukraine and Library of Congress DK508 catalog records.",
+  "lang": "en",
   "icons": [],
   "start_url": ".",
   "display": "standalone",
